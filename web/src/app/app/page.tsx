@@ -39,7 +39,7 @@ export default function AppDashboard() {
   useEffect(() => {
     fetch("/api/agreements")
       .then((r) => r.json())
-      .then((d) => setAgreements(d.agreements || []))
+      .then((d: any) => setAgreements(d.agreements || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

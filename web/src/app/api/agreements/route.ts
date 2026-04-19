@@ -49,7 +49,7 @@ ${rawInput}`;
     }),
   });
 
-  const data = await res.json();
+  const data = ((((await res.json()) as any)) as any);
   const content = data.choices?.[0]?.message?.content || "";
 
   // Extract JSON from response (may be wrapped in markdown code block)
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  const body = ((await req.json()) as any);
   const rawInput = body.raw_input || "";
   const id = `agr_${nanoid(12)}`;
 

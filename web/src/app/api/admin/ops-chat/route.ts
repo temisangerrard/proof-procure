@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { messages } = await req.json();
+  const { messages } = ((await req.json()) as any);
   const context = await buildContext();
 
   const systemPrompt = `You are the ProofProcure ops assistant. You help admins monitor and manage the procurement agreement system.
@@ -109,7 +109,7 @@ Keep responses concise and operational. No marketing language. Reference specifi
     }),
   });
 
-  const data = await res.json();
+  const data = ((((await res.json()) as any)) as any);
   const choice = data.choices?.[0];
 
   if (!choice) {

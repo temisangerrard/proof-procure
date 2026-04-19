@@ -22,7 +22,7 @@ export default function AdminAgreementsPage() {
   useEffect(() => {
     fetch("/api/admin/agreements")
       .then((r) => r.json())
-      .then((d) => setAgreements(d.agreements || []))
+      .then((d: any) => setAgreements(d.agreements || []))
       .catch(() => {});
   }, []);
 

@@ -60,7 +60,7 @@ export default function VerifyPage() {
         body: JSON.stringify({ email, code: fullCode }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = ((await res.json()) as any).catch(() => ({}));
         throw new Error(data.error || "Invalid code");
       }
       sessionStorage.removeItem("pp_pending_email");

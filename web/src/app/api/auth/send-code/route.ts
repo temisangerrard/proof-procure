@@ -3,7 +3,7 @@ import { d1 } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const { email } = ((await req.json()) as any);
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }

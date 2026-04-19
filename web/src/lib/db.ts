@@ -1,40 +1,50 @@
-import { env } from "./env";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 
-interface D1Result {
-  results: Record<string, unknown>[];
+/**
+ * D1 helper using native Cloudflare bindings.
+ * No API token, no HTTP fetch — direct access via getRequestContext().
+ */
+interface D1Result<T = Record<string, unknown>> {
+  results: T[];
   success: boolean;
   meta?: Record<string, unknown>;
 }
 
-interface D1Response {
-  result: D1Result[];
-  success: boolean;
-  errors: { message: string }[];
-}
-
-async function execute(sql: string, params?: unknown[]): Promise<D1Result> {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${env.DATABASE_ID}/query`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.CLOUDFLARE_D1_API_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sql, params: params || [] }),
-  });
-  const data: D1Response = await res.json();
-  if (!data.success) throw new Error(data.errors?.[0]?.message || "D1 query failed");
-  return data.result[0];
+function getDB(): D1Database {
+  const ctx = getRequestContext();
+  const db = ctx.env.DB as D1Database;
+  if (!db) throw new Error("D1 binding not available — check wrangler.toml");
+  return db;
 }
 
 export const d1 = {
-  query: (sql: string, params?: unknown[]) => execute(sql, params),
-  run: (sql: string, params?: unknown[]) => execute(sql, params),
-  async batch(statements: { sql: string; params?: unknown[] }[]) {
-    const results: D1Result[] = [];
-    for (const s of statements) {
-      results.push(await execute(s.sql, s.params));
+  async query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<D1Result<T>> {
+    const db = getDB();
+    const stmt = db.prepare(sql);
+    if (params && params.length > 0) {
+      stmt.bind(...params);
     }
-    return results;
+    return stmt.all<T>() as Promise<D1Result<T>>;
+  },
+
+  async run(sql: string, params?: unknown[]): Promise<D1Result> {
+    const db = getDB();
+    const stmt = db.prepare(sql);
+    if (params && params.length > 0) {
+      stmt.bind(...params);
+    }
+    return stmt.run() as Promise<D1Result>;
+  },
+
+  async batch(statements: { sql: string; params?: unknown[] }[]): Promise<D1Result[]> {
+    const db = getDB();
+    const stmts = statements.map((s) => {
+      const stmt = db.prepare(s.sql);
+      if (s.params && s.params.length > 0) {
+        stmt.bind(...s.params);
+      }
+      return stmt;
+    });
+    return db.batch(stmts) as Promise<D1Result[]>;
   },
 };

@@ -40,12 +40,13 @@ export default function OpsChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })) }),
       });
-      const data = await res.json();
+      const data = ((await res.json()) as any);
 
+      const d = data as any;
       const assistantMsg: Message = {
         role: "assistant",
-        content: data.content || "",
-        action: data.action || undefined,
+        content: d.content || "",
+        action: d.action || undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
@@ -72,10 +73,10 @@ export default function OpsChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(msg.action),
       });
-      const data = await res.json();
+      const data = ((await res.json()) as any);
       setMessages((prev) =>
         prev.map((m, i) =>
-          i === msgIndex ? { ...m, action: { ...m.action!, status: "executed" }, content: m.content + `\n\n✓ ${data.message || "Done."}` } : m
+          i === msgIndex ? { ...m, action: { ...m.action!, status: "executed" }, content: m.content + `\n\n✓ ${(data as any).message || "Done."}` } : m
         )
       );
     } catch {

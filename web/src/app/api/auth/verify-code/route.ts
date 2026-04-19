@@ -4,7 +4,7 @@ import { d1 } from "@/lib/db";
 import { createSessionCookie, isAdminEmail, COOKIE_NAME } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const { email, code } = await req.json();
+  const { email, code } = ((await req.json()) as any);
   if (!email || !code) {
     return NextResponse.json({ error: "Email and code required" }, { status: 400 });
   }

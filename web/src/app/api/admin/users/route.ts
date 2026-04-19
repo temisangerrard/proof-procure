@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { userId, role } = await req.json();
+  const { userId, role } = ((await req.json()) as any);
   if (!userId || !["admin", "user"].includes(role)) {
     return NextResponse.json({ error: "Invalid" }, { status: 400 });
   }

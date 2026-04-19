@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json();
+  const body = ((await req.json()) as any);
 
   const allowed = ["status", "item", "quantity", "price", "total", "supplier_email", "delivery_window", "payment_condition"];
   const sets: string[] = [];

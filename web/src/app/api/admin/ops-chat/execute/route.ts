@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { type, params } = await req.json();
+  const { type, params } = ((await req.json()) as any);
   const handler = HANDLERS[type];
   if (!handler) return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 

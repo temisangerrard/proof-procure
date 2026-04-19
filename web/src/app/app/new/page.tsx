@@ -23,7 +23,7 @@ export default function NewAgreementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw_input: input.trim() }),
       });
-      const data = await res.json();
+      const data = ((await res.json()) as any);
       if (!res.ok) throw new Error(data.error || data.message || "Extraction failed");
       setResult(data);
     } catch (err) {
