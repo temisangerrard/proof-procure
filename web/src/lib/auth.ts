@@ -4,7 +4,7 @@ import { env } from "./env";
 import crypto from "crypto";
 
 const COOKIE_NAME = "pp_session";
-const ADMIN_EMAIL = "mirasettley@gmail.com";
+const ADMIN_EMAILS = ["mirasettley@gmail.com", "tagbajoh@gmail.com"];
 
 interface SessionUser {
   id: string;
@@ -50,7 +50,7 @@ export async function requireAdmin(): Promise<SessionUser> {
 }
 
 export function isAdminEmail(email: string): boolean {
-  return email.toLowerCase() === ADMIN_EMAIL;
+  return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export { COOKIE_NAME };

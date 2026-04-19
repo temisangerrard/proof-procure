@@ -9,7 +9,6 @@ function optional(key: string, fallback: string = ""): string {
 }
 
 export const env = {
-  get RESEND_API_KEY() { return required("RESEND_API_KEY"); },
   get CLOUDFLARE_ACCOUNT_ID() { return required("CLOUDFLARE_ACCOUNT_ID"); },
   get CLOUDFLARE_D1_API_TOKEN() { return required("CLOUDFLARE_D1_API_TOKEN"); },
   get DATABASE_ID() { return required("DATABASE_ID"); },
