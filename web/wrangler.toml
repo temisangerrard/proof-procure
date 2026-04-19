@@ -1,0 +1,12 @@
+name = "proof-procure"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".open-next"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "proof-procure-db"
+database_id = "a6e45af5-39b1-45ed-bd4b-23752f35ef85"
+
+[vars]
+BASE_RPC_URL = "https://mainnet.base.org"
