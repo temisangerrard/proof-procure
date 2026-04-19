@@ -3,41 +3,59 @@ import { getSessionUser } from "@/lib/auth";
 import { d1 } from "@/lib/db";
 import { env } from "@/lib/env";
 
-const TOOLS = [
+const TOOLS: OpenAITool[] = [
   {
-    name: "update_agreement_status",
-    description: "Update the status of an agreement",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        agreement_id: { type: "string", description: "The agreement ID" },
-        status: { type: "string", enum: ["draft", "ratified", "funded", "delivered", "confirmed", "payment_released", "rejected", "expired"] },
+    type: "function",
+    function: {
+      name: "update_agreement_status",
+      description: "Update the status of an agreement",
+      parameters: {
+        type: "object",
+        properties: {
+          agreement_id: { type: "string", description: "The agreement ID" },
+          status: { type: "string", enum: ["draft", "ratified", "funded", "delivered", "confirmed", "payment_released", "rejected", "expired"] },
+        },
+        required: ["agreement_id", "status"],
       },
-      required: ["agreement_id", "status"],
     },
   },
   {
-    name: "toggle_admin",
-    description: "Toggle admin role for a user",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        user_id: { type: "string" },
-        role: { type: "string", enum: ["admin", "user"] },
+    type: "function",
+    function: {
+      name: "toggle_admin",
+      description: "Toggle admin role for a user",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string" },
+          role: { type: "string", enum: ["admin", "user"] },
+        },
+        required: ["user_id", "role"],
       },
-      required: ["user_id", "role"],
     },
   },
   {
-    name: "view_agreement_details",
-    description: "View full details of a specific agreement",
-    input_schema: {
-      type: "object" as const,
-      properties: { agreement_id: { type: "string" } },
-      required: ["agreement_id"],
+    type: "function",
+    function: {
+      name: "view_agreement_details",
+      description: "View full details of a specific agreement",
+      parameters: {
+        type: "object",
+        properties: { agreement_id: { type: "string" } },
+        required: ["agreement_id"],
+      },
     },
   },
 ];
+
+interface OpenAITool {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
+}
 
 async function buildContext() {
   const [counts, recent, users, events] = await d1.batch([
@@ -68,38 +86,50 @@ ${context}
 You can propose actions using the available tools. When proposing an action, explain what you're about to do and why.
 Keep responses concise and operational. No marketing language. Reference specific agreement IDs and user emails when relevant.`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  // Convert messages to OpenAI format (they come as Anthropic-style from frontend)
+  const openaiMessages: Array<{ role: string; content: string }> = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((m: { role: string; content: string }) => ({
+      role: m.role === "human" ? "user" : m.role,
+      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+    })),
+  ];
+
+  const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
     method: "POST",
     headers: {
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      "Authorization": `Bearer ${env.GLM_API_KEY}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: systemPrompt,
+      model: "glm-4-plus",
+      messages: openaiMessages,
       tools: TOOLS,
-      messages,
+      max_tokens: 1024,
     }),
   });
 
   const data = await res.json();
+  const choice = data.choices?.[0];
 
-  // Check for tool use
-  const toolUse = data.content?.find((b: { type: string }) => b.type === "tool_use");
-  if (toolUse) {
-    const textBlock = data.content?.find((b: { type: string }) => b.type === "text");
+  if (!choice) {
+    return NextResponse.json({ content: "No response from AI." });
+  }
+
+  // Check for tool calls
+  const toolCall = choice.message?.tool_calls?.[0];
+  if (toolCall) {
+    const textContent = choice.message?.content || "";
     return NextResponse.json({
-      content: textBlock?.text || "",
+      content: textContent,
       action: {
-        type: toolUse.name,
-        params: toolUse.input,
-        label: `${toolUse.name}(${JSON.stringify(toolUse.input)})`,
+        type: toolCall.function.name,
+        params: JSON.parse(toolCall.function.arguments),
+        label: `${toolCall.function.name}(${toolCall.function.arguments})`,
       },
     });
   }
 
-  const text = data.content?.map((b: { type: string; text?: string }) => b.text || "").join("") || "No response.";
+  const text = choice.message?.content || "No response.";
   return NextResponse.json({ content: text });
 }
