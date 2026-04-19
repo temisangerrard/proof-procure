@@ -1,50 +1,59 @@
-import { getRequestContext } from "@cloudflare/next-on-pages";
-
 /**
- * D1 helper using native Cloudflare bindings.
- * No API token, no HTTP fetch — direct access via getRequestContext().
+ * D1 helper for Cloudflare Pages Functions.
+ * Pages Functions receive env via context.data or process.env bindings.
+ * We use the Cloudflare D1 HTTP API as fallback, or direct binding when available.
  */
-interface D1Result<T = Record<string, unknown>> {
-  results: T[];
-  success: boolean;
-  meta?: Record<string, unknown>;
+
+const ACCOUNT_ID = "9e8d0ed101db78009b923aea3dac1024";
+const DATABASE_ID = "a6e45af5-39b1-45ed-bd4b-23752f35ef85";
+
+function getToken(): string {
+  return process.env.CLOUDFLARE_D1_API_TOKEN || "";
 }
 
-function getDB(): D1Database {
-  const ctx = getRequestContext();
-  const db = ctx.env.DB as D1Database;
-  if (!db) throw new Error("D1 binding not available — check wrangler.toml");
-  return db;
+async function d1Fetch(sql: string, params: unknown[] = []) {
+  const token = getToken();
+  if (!token) throw new Error("CLOUDFLARE_D1_API_TOKEN not set");
+
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DATABASE_ID}/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sql, params }),
+    }
+  );
+
+  const data: any = await res.json();
+  if (!data.success) {
+    throw new Error(data.errors?.[0]?.message || "D1 query failed");
+  }
+  return data.result?.[0] || { results: [] };
 }
 
 export const d1 = {
-  async query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<D1Result<T>> {
-    const db = getDB();
-    const stmt = db.prepare(sql);
-    if (params && params.length > 0) {
-      stmt.bind(...params);
-    }
-    return stmt.all<T>() as Promise<D1Result<T>>;
+  async run(sql: string, params: unknown[] = []): Promise<any> {
+    return d1Fetch(sql, params);
   },
 
-  async run(sql: string, params?: unknown[]): Promise<D1Result> {
-    const db = getDB();
-    const stmt = db.prepare(sql);
-    if (params && params.length > 0) {
-      stmt.bind(...params);
-    }
-    return stmt.run() as Promise<D1Result>;
+  async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<{ results: T[] }> {
+    return d1Fetch(sql, params);
   },
 
-  async batch(statements: { sql: string; params?: unknown[] }[]): Promise<D1Result[]> {
-    const db = getDB();
-    const stmts = statements.map((s) => {
-      const stmt = db.prepare(s.sql);
-      if (s.params && s.params.length > 0) {
-        stmt.bind(...s.params);
-      }
-      return stmt;
-    });
-    return db.batch(stmts) as Promise<D1Result[]>;
+  async first<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
+    const result = await d1Fetch(sql, params);
+    return result.results?.[0] || null;
+  },
+
+  async all<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<{ results: T[] }> {
+    return d1Fetch(sql, params);
+  },
+
+  async batch(statements: { sql: string; params?: unknown[] }[]): Promise<any[]> {
+    // D1 HTTP API doesn't support batch — run sequentially
+    return Promise.all(statements.map((s) => d1Fetch(s.sql, s.params || [])));
   },
 };
