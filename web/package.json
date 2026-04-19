@@ -26,6 +26,7 @@
     "wrangler": "^4.83.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260418.1",
     "@opennextjs/cloudflare": "^1.19.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
