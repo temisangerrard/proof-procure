@@ -8,7 +8,7 @@ import { ArrowLeft, Loader2, Send } from "lucide-react";
 export default function NewAgreementPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ id: string; share_url: string } | null>(null);
+  const [result, setResult] = useState<{ id: string } | null>(null);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,8 +18,7 @@ export default function NewAgreementPage() {
     setError("");
 
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      const res = await fetch(`${API}/api/agreements/extract`, {
+      const res = await fetch("/api/agreements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw_input: input.trim() }),
@@ -48,9 +47,9 @@ export default function NewAgreementPage() {
 
       {result ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <p className="font-medium text-emerald-800">Terms extracted successfully</p>
+          <p className="font-medium text-emerald-800">Agreement created</p>
           <p className="mt-1 text-sm text-emerald-600">
-            Agreement created. You can review and confirm the extracted terms.
+            Review and confirm the extracted terms.
           </p>
           <Link href={`/app/agreement/${result.id}`}>
             <Button size="sm" className="mt-4">
