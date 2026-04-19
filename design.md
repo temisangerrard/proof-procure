@@ -219,12 +219,17 @@ Supplier confirms
 - Sends structured proposal cards with inline buttons (Confirm / Edit / Reject).
 - Pushes status updates at every state transition.
 
-### 4.2 Gmail Ingestion
+### 4.2 Email Ingestion (mirasettley@gmail.com)
 
-- Gmail API watch on inbox or label.
-- Parse incoming forwarded procurement emails.
-- Extract text body (strip signatures, threads).
-- Feed into extraction pipeline.
+- Dedicated inbox: mirasettley@gmail.com
+- Gmail API watch on inbox (poll every 30 seconds or push via Pub/Sub).
+- All incoming emails treated as potential procurement agreements.
+- Parse email body (strip signatures, threads, forwarded headers).
+- Extract sender email → map to buyer or supplier.
+- Extract attachments if present (purchase orders, invoices).
+- Feed cleaned text into extraction pipeline.
+- Reply with confirmation + proposal link.
+- V0: single Gmail account with App Password. V1: custom domain (agreements@proofprocure.com) with SendGrid inbound parse.
 
 ### 4.3 Web Fallback
 
@@ -235,17 +240,42 @@ Supplier confirms
 
 ## 5. Wallet Layer Design
 
-### 5.1 Privy Integration
+### 5.1 Self-Managed Embedded Wallets (No Privy)
 
-- Embedded wallets for both buyer and supplier.
-- Wallets created on first interaction (email-based or social login).
-- Users never see addresses or manage keys directly.
+ProofProcure generates deterministic wallets server-side. Users never see keys, addresses, or gas.
 
-### 5.2 Gas Abstraction
+**Derivation:**
+```
+wallet = eth_wallet_from_seed(SEED + user_email)
+```
 
-- Use Privy's gas sponsorship or a simple paymaster.
+- Platform holds a single SEED (stored in env, never committed).
+- Each user gets a deterministic wallet derived from `SEED + email`.
+- Wallet address is stable — same email always maps to same address.
+- Private keys never leave the server.
+- Users authenticate via email + OTP or magic link. No passwords.
+
+**Wallet lifecycle:**
+1. User interacts via Telegram or email → system derives their wallet.
+2. When funding is needed → backend constructs + signs the USDC approval + deposit tx.
+3. User clicks "Fund" → backend executes on their behalf.
+4. All signing is server-side. User sees only "Confirm" / "Approve" buttons.
+
+### 5.2 Gas Abstraction (Self-Hosted)
+
+- Platform maintains a gas sponsor wallet (funded with ETH on Base).
+- Before any user transaction, backend estimates gas.
+- Backend sends ETH from sponsor wallet to user wallet (just enough for gas).
+- Backend then submits the user's signed transaction.
 - All gas costs covered by platform (V0).
-- User transactions appear as "Confirm" / "Approve" buttons — signing only.
+- Users never see ETH, never see gas, never see wallet addresses.
+
+### 5.3 Security
+
+- SEED stored in environment variable, never in code or git.
+- Private keys exist only in server memory during transaction signing.
+- No keys in database.
+- Rate limiting on wallet derivation to prevent brute force.
 
 ## 6. Database Schema
 
@@ -333,6 +363,9 @@ proof-procure/
 │   │   │   └── web/
 │   │   ├── contracts/
 │   │   ├── wallet/
+│   │   │   ├── derive.ts       # deterministic wallet from SEED + email
+│   │   │   ├── sponsor.ts      # gas sponsor wallet + funding
+│   │   │   └── signer.ts       # server-side tx construction + signing
 │   │   ├── notifications/
 │   │   └── db/
 │   ├── package.json
