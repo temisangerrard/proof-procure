@@ -16,6 +16,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
 export default function HomePage() {
   return (
@@ -23,7 +24,7 @@ export default function HomePage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <span className="text-lg font-semibold tracking-tight">ProofProcure</span>
+          <Logo />
           <Link href="/login">
             <Button size="sm">Sign in</Button>
           </Link>

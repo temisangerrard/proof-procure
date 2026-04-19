@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { LogOut, Plus } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,8 +24,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50">
       <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <Link href="/app" className="text-lg font-semibold tracking-tight">
-            ProofProcure
+          <Link href="/app">
+            <Logo />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/app/new">

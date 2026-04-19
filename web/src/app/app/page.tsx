@@ -1,32 +1,59 @@
 "use client";
 
 import Link from "next/link";
-import { SEED_AGREEMENTS } from "@/lib/seed";
-import { StatusBadge } from "@/components/status-badge";
-import { MessageSquareText, Mail, FileUp, Bot, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { MessageSquareText, Mail, FileUp, ArrowRight } from "lucide-react";
+
+interface DBAgreement {
+  id: string;
+  item: string;
+  status: string;
+  supplier_email: string;
+  quantity: string;
+  price: string;
+  total: string;
+  created_at: string;
+}
+
+const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  draft: { label: "Draft", className: "bg-gray-100 text-gray-600" },
+  awaiting_buyer: { label: "Awaiting buyer", className: "bg-blue-50 text-blue-700" },
+  awaiting_supplier: { label: "Awaiting supplier", className: "bg-blue-50 text-blue-700" },
+  ratified: { label: "Ratified", className: "bg-amber-50 text-amber-700" },
+  funded: { label: "Funded", className: "bg-indigo-50 text-indigo-700" },
+  delivered: { label: "Delivered", className: "bg-orange-50 text-orange-700" },
+  confirmed: { label: "Confirmed", className: "bg-emerald-50 text-emerald-700" },
+  payment_released: { label: "Payment released", className: "bg-emerald-50 text-emerald-700" },
+};
 
 const QUICK_START = [
-  { icon: MessageSquareText, title: "Paste a conversation", desc: "Copy a Telegram or WhatsApp chat", href: "/app/new" },
-  { icon: Mail, title: "Forward an email thread", desc: "Forward procurement emails to extract terms", href: "/app/new" },
-  { icon: FileUp, title: "Upload a document", desc: "Upload a PO, invoice, or spec sheet", href: "/app/new" },
-  { icon: Bot, title: "Connect Telegram bot", desc: "Let the bot listen to your procurement channels", href: "/app/new" },
+  { icon: MessageSquareText, title: "Paste conversation", desc: "Copy a Telegram or WhatsApp chat", href: "/app/new" },
+  { icon: Mail, title: "Forward email thread", desc: "Forward procurement emails to extract terms", href: "/app/new" },
+  { icon: FileUp, title: "Upload document", desc: "Upload a PO, invoice, or spec sheet", href: "/app/new" },
 ];
 
 export default function AppDashboard() {
+  const [agreements, setAgreements] = useState<DBAgreement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/agreements")
+      .then((r) => r.json())
+      .then((d) => setAgreements(d.agreements || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="space-y-10">
-      {/* Hero */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Turn messy procurement conversations into structured agreements
-        </h1>
-        <p className="mt-2 text-gray-500">
-          Paste a chat, forward an email, or upload a document. ProofProcure extracts the terms, both parties confirm, and payment executes automatically.
+        <h1 className="text-2xl font-semibold tracking-tight">Agreements</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Paste a chat, forward an email, or upload a document. Terms are extracted, both parties confirm, payment executes.
         </p>
       </div>
 
-      {/* Quick start */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {QUICK_START.map((item) => (
           <Link
             key={item.title}
@@ -40,32 +67,50 @@ export default function AppDashboard() {
         ))}
       </div>
 
-      {/* Agreements list */}
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Your agreements</h2>
-          <span className="text-sm text-gray-400">{SEED_AGREEMENTS.length} total</span>
+          <span className="text-sm text-gray-400">{agreements.length} total</span>
         </div>
-        <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-          {SEED_AGREEMENTS.map((agr) => (
-            <Link
-              key={agr.id}
-              href={`/app/agreement/${agr.id}`}
-              className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-gray-50"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3">
-                  <p className="truncate text-sm font-medium">{agr.item}</p>
-                  <StatusBadge status={agr.state} />
-                </div>
-                <p className="mt-1 text-xs text-gray-400">
-                  {agr.counterparty} · {agr.quantity} × ${agr.price} · ${agr.total.toLocaleString()}
-                </p>
-              </div>
-              <ArrowRight className="size-4 shrink-0 text-gray-300" />
-            </Link>
-          ))}
-        </div>
+
+        {loading ? (
+          <div className="mt-4 rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
+            Loading…
+          </div>
+        ) : agreements.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
+            <p className="text-sm text-gray-500">No agreements yet.</p>
+            <p className="mt-1 text-xs text-gray-400">
+              Paste a conversation or forward an email to create your first agreement.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+            {agreements.map((agr) => {
+              const s = STATUS_LABELS[agr.status] || { label: agr.status, className: "bg-gray-100 text-gray-600" };
+              return (
+                <Link
+                  key={agr.id}
+                  href={`/app/agreement/${agr.id}`}
+                  className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-gray-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <p className="truncate text-sm font-medium">{agr.item}</p>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {agr.supplier_email || "No supplier"} · {agr.quantity} × ${agr.price} · ${agr.total}
+                    </p>
+                  </div>
+                  <ArrowRight className="size-4 shrink-0 text-gray-300" />
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
