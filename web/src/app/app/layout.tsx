@@ -1,24 +1,15 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { LogOut, Plus } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { email, signOut } = useAuth();
-  const router = useRouter();
+  const { email, loading, signOut } = useAuth();
 
-  useEffect(() => {
-    if (!email && typeof window !== "undefined" && !sessionStorage.getItem("pp_email")) {
-      router.replace("/login");
-    }
-  }, [email, router]);
-
-  if (!email) return null;
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">

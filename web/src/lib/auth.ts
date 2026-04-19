@@ -1,40 +1,40 @@
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { env } from "./env";
-import crypto from "crypto";
+import { d1 } from "./db";
+import { nanoid } from "nanoid";
 
-const COOKIE_NAME = "pp_session";
 const ADMIN_EMAILS = ["mirasettley@gmail.com", "tagbajoh@gmail.com"];
 
-interface SessionUser {
+export interface SessionUser {
   id: string;
   email: string;
   role: string;
 }
 
-function sign(payload: string): string {
-  return crypto.createHmac("sha256", env.SESSION_SECRET).update(payload).digest("hex");
-}
-
-export function createSessionCookie(user: { id: string; email: string; role: string }) {
-  const payload = JSON.stringify({ id: user.id, email: user.email, role: user.role });
-  const sig = sign(payload);
-  return `${Buffer.from(payload).toString("base64")}.${sig}`;
+export function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const raw = jar.get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-  const [b64, sig] = raw.split(".");
-  if (!b64 || !sig) return null;
-  try {
-    const payload = Buffer.from(b64, "base64").toString("utf-8");
-    if (sign(payload) !== sig) return null;
-    return JSON.parse(payload) as SessionUser;
-  } catch {
-    return null;
+  const h = await headers();
+  const email = h.get("cf-access-authenticated-user-email");
+  if (!email) return null;
+
+  const lower = email.toLowerCase();
+  const existing = await d1.query("SELECT id, role FROM users WHERE email = ?", [lower]);
+
+  if (existing.results.length > 0) {
+    return {
+      id: existing.results[0].id as string,
+      email: lower,
+      role: existing.results[0].role as string,
+    };
   }
+
+  const id = nanoid();
+  const role = isAdminEmail(lower) ? "admin" : "user";
+  await d1.run("INSERT INTO users (id, email, role) VALUES (?, ?, ?)", [id, lower, role]);
+  return { id, email: lower, role };
 }
 
 export async function requireAuth(): Promise<SessionUser> {
@@ -48,9 +48,3 @@ export async function requireAdmin(): Promise<SessionUser> {
   if (user.role !== "admin") redirect("/app");
   return user;
 }
-
-export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase());
-}
-
-export { COOKIE_NAME };

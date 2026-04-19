@@ -4,31 +4,40 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 
 interface AuthCtx {
   email: string | null;
-  signIn: (email: string) => void;
+  role: string | null;
+  loading: boolean;
   signOut: () => void;
 }
 
-const AuthContext = createContext<AuthCtx>({ email: null, signIn: () => {}, signOut: () => {} });
+const AuthContext = createContext<AuthCtx>({ email: null, role: null, loading: true, signOut: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setEmail(typeof window !== "undefined" ? sessionStorage.getItem("pp_email") : null);
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: any) => {
+        if (data?.email) {
+          setEmail(data.email);
+          setRole(data.role);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const signIn = (e: string) => {
-    sessionStorage.setItem("pp_email", e);
-    setEmail(e);
-  };
-
   const signOut = () => {
-    sessionStorage.removeItem("pp_email");
-    setEmail(null);
-    window.location.href = "/";
+    window.location.href = "/cdn-cgi/access/logout";
   };
 
-  return <AuthContext.Provider value={{ email, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ email, role, loading, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => useContext(AuthContext);
