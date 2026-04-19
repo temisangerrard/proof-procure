@@ -1,5 +1,6 @@
 import { db } from "../db/client";
 import { checkTimeout } from "../contracts/index";
+import { notifyAgreementUpdate } from "../notifications/orchestrator";
 
 const KEEPER_INTERVAL_MS = 60_000;
 const KEEPER_EMAIL = process.env.KEEPER_EMAIL || "keeper@proofprocure.com";
@@ -22,6 +23,7 @@ async function runKeeperCycle(): Promise<void> {
     try {
       const txHash = await checkTimeout(row.id, row.contract_address, KEEPER_EMAIL);
       console.log(`[keeper] Timeout triggered for ${row.id} — tx: ${txHash}`);
+      notifyAgreementUpdate(row.id, "KEEPER_TIMEOUT_TRIGGERED").catch(console.error);
 
       await db.query(
         `INSERT INTO audit_events (id, agreement_id, event_type, actor, onchain_tx_hash, metadata, created_at)

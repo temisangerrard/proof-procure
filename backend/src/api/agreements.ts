@@ -14,6 +14,7 @@ import {
   syncOnchainState,
 } from "../contracts/index";
 import { deriveAddress } from "../wallet/derive";
+import { notifyAgreementUpdate } from "../notifications/orchestrator";
 
 export const agreementsRouter = Router();
 
@@ -239,10 +240,12 @@ agreementsRouter.post("/:id/ratify", async (req: Request, res: Response) => {
         console.error(`Deployment failed for ${agreement.id}:`, err)
       );
 
+      notifyAgreementUpdate(agreement.id, "DUAL_RATIFICATION_COMPLETE").catch(console.error);
       res.json({ id: agreement.id, state: "RATIFIED", dual_ratified: true, deploying: true });
       return;
     }
 
+    notifyAgreementUpdate(agreement.id, `${role.toUpperCase()}_RATIFIED`).catch(console.error);
     res.json({ id: agreement.id, state: agreement.state, dual_ratified: false, [`${role}_ratified`]: true });
   } catch (err) {
     console.error("Ratification failed:", err);
@@ -295,6 +298,7 @@ agreementsRouter.post("/:id/fund", async (req: Request, res: Response) => {
 
     const totalUsdc = BigInt(Math.round((row.extracted_data.total as number) * 1e6));
     const txHash = await fundAgreement(row.id, buyer_email, row.contract_address, totalUsdc);
+    notifyAgreementUpdate(row.id, "AGREEMENT_FUNDED").catch(console.error);
     res.json({ id: row.id, state: "FUNDED", tx_hash: txHash });
   } catch (err) {
     console.error("Fund failed:", err);
@@ -312,6 +316,7 @@ agreementsRouter.post("/:id/deliver", async (req: Request, res: Response) => {
     if (row.state !== "FUNDED") { res.status(409).json({ error: `Cannot mark delivered in ${row.state} state` }); return; }
 
     const txHash = await markDelivered(row.id, supplier_email, row.contract_address);
+    notifyAgreementUpdate(row.id, "DELIVERY_MARKED").catch(console.error);
     res.json({ id: row.id, state: "DELIVERED_PENDING_CONFIRMATION", tx_hash: txHash });
   } catch (err) {
     console.error("Deliver failed:", err);
@@ -329,6 +334,7 @@ agreementsRouter.post("/:id/approve", async (req: Request, res: Response) => {
     if (row.state !== "DELIVERED_PENDING_CONFIRMATION") { res.status(409).json({ error: `Cannot approve in ${row.state} state` }); return; }
 
     const txHash = await approveDelivery(row.id, buyer_email, row.contract_address);
+    notifyAgreementUpdate(row.id, "PAYMENT_RELEASED").catch(console.error);
     res.json({ id: row.id, state: "COMPLETED", tx_hash: txHash });
   } catch (err) {
     console.error("Approve failed:", err);
@@ -346,6 +352,7 @@ agreementsRouter.post("/:id/reject", async (req: Request, res: Response) => {
     if (row.state !== "DELIVERED_PENDING_CONFIRMATION") { res.status(409).json({ error: `Cannot reject in ${row.state} state` }); return; }
 
     const txHash = await rejectDelivery(row.id, buyer_email, row.contract_address);
+    notifyAgreementUpdate(row.id, "PAYMENT_REJECTED").catch(console.error);
     res.json({ id: row.id, state: "EXPIRED", tx_hash: txHash });
   } catch (err) {
     console.error("Reject failed:", err);

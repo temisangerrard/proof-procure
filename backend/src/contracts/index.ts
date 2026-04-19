@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { deriveWallet, deriveAddress } from "../wallet/derive";
 import { signAndSend } from "../wallet/signer";
 import { db } from "../db/client";
+import { notifyAgreementUpdate } from "../notifications/orchestrator";
 import path from "path";
 import fs from "fs";
 
@@ -286,6 +287,7 @@ export function listenToAgreementEvents(contractAddress: string, agreementId: st
           event.log?.transactionHash ?? null,
           {}
         );
+        notifyAgreementUpdate(agreementId, eventType).catch(console.error);
       } catch (err) {
         console.error(`Event sync failed for ${eventName} on ${agreementId}:`, err);
       }
