@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
+    "@circle-fin/user-controlled-wallets": "^10.3.1",
+    "@circle-fin/w3s-pw-web-sdk": "^1.1.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "ethers": "^6.16.0",

@@ -1,383 +1,571 @@
-# ProofProcure — Technical Design
+# Proof Procure - Technical Design
 
 ## 1. Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    CHANNEL LAYER                         │
-│  Telegram Bot │ Gmail Forwarder │ Web Fallback           │
-└──────┬────────────────┬────────────────┬────────────────┘
-       │                │                │
-       ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────┐
-│                 NORMALIZATION LAYER                      │
-│  Parse channel input → common message format             │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                 EXTRACTION LAYER                         │
-│  Claude API → structured agreement schema                │
-│  Confidence scoring │ Reject incomplete                  │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                 PROPOSAL LAYER                           │
-│  Editable agreement │ Missing field highlights           │
-│  Shareable link for counterparty                        │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               RATIFICATION LAYER                         │
-│  Buyer confirms │ Supplier confirms                      │
-│  Dual signature → identical spec enforced                │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               CONTRACT LAYER                             │
-│  Solidity on Base mainnet                                │
-│  Factory → Proxy deployment                              │
-│  USDC escrow │ Timeout enforcement │ Auto-release        │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               WALLET LAYER                               │
-│  Privy embedded wallets                                  │
-│  Gas abstraction (paymaster or relayer)                  │
-│  Invisible to users                                      │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│               NOTIFICATION LAYER                         │
-│  Push updates back to originating channel                │
-│  Telegram message │ Email │ In-app                       │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 2. Smart Contract Design
-
-### 2.1 ContractFactory
-
-Deploys proxy instances per agreement.
-
-```solidity
-contract ProofProcureFactory {
-    function createAgreement(AgreementSpec calldata spec) external returns (address);
-    function getAgreement(bytes32 agreementHash) external view returns (address);
-}
-```
-
-### 2.2 AgreementContract (per procurement agreement)
-
-#### Storage
-
-```solidity
-struct AgreementSpec {
-    address buyer;
-    address supplier;
-    string item;
-    uint256 quantity;
-    uint256 pricePerUnit;
-    uint256 totalAmount;
-    uint256 deliveryDeadline;
-    uint256 confirmationWindow;  // seconds after delivery marking
-    ConfirmationType confirmationType;
-    bytes32 agreementHash;
-    uint256 expiryTimestamp;
-}
-
-enum ConfirmationType { BUYER_CONFIRMATION, SHIPPING_CONFIRMATION, RECEIPT_UPLOAD }
-enum State {
-    DRAFT,
-    PROPOSED,
-    RATIFIED,
-    DEPLOYED,
-    FUNDED,
-    DELIVERED_PENDING_CONFIRMATION,
-    COMPLETED,
-    EXPIRED,
-    REFUNDED
-}
-```
-
-#### State Transitions
+Proof Procure is a stables-powered supplier payment app and procurement operating account with an embedded supplier-obligation and payment-readiness system. Stablecoin infrastructure is part of the funding and settlement backend, while the user-facing model stays simple: money in, people, bills, pay, grow.
 
 ```
-DEPLOYED → fund() → FUNDED
-FUNDED → markDelivered() [supplier only] → DELIVERED_PENDING_CONFIRMATION
-DELIVERED_PENDING_CONFIRMATION → approve() [buyer] → COMPLETED (release payment)
-DELIVERED_PENDING_CONFIRMATION → reject() [buyer] → PAUSED
-DELIVERED_PENDING_CONFIRMATION → timeout check → COMPLETED (auto-release)
-FUNDED/DELIVERED_PENDING_CONFIRMATION → expire() → EXPIRED → REFUNDED
++--------------------------------------------------------------+
+| UX LAYER                                                     |
+| Home | Guided Simple Mode | People | Bills | Pay | Grow          |
++-------------------------------+------------------------------+
+                                |
+                                v
++--------------------------------------------------------------+
+| PROCUREMENT ACCOUNT LAYER                                    |
+| Balance | Stable dollars | Available to pay                    |
++-------------------------------+------------------------------+
+                                |
+                                v
++--------------------------------------------------------------+
+| SUPPLIER OPERATIONS LAYER                                    |
+| People | Bills | Grow balance | Readiness snapshot         |
++---------------+-------------------------------+--------------+
+                |                               |
+                v                               v
++------------------------------+  +-----------------------------+
+| CAPTURE WORKFLOWS            |  | PAYMENT WORKFLOWS           |
+| Manual entry                 |  | Add stable dollars          |
+| Invoice upload               |  | Initiate supplier payment   |
+| Chat/email term capture      |  | Mark paid                   |
+| Agreement confirmation       |  | Audit payment status        |
++---------------+--------------+  +--------------+--------------+
+                |                                |
+                v                                v
++--------------------------------------------------------------+
+| SETTLEMENT LAYER                                             |
+| Circle/Arc rails | Stablecoin balances | Cross-currency/off-ramp    |
+| Guided crypto funding, no gas or trading UX                  |
++--------------------------------------------------------------+
 ```
 
-#### Core Functions
+The product must make procurement money feel continuously ready for supplier settlement. The implementation uses stables rails, but the primary product concepts are balance, people, bills, pay, and grow.
 
-```solidity
-function fund(uint256 amount) external;                    // buyer deposits USDC
-function markDelivered(bytes memory proof) external;       // supplier marks delivered
-function approve() external;                               // buyer approves release
-function reject() external;                                // buyer rejects → pause
-function checkTimeout() external;                          // anyone can call after window
-function claimRefund() external;                           // buyer claims after expiry
+## 2. Domain Model
+
+### 2.1 ProcurementAccount
+
+Represents the business operating account used for supplier payments.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| id | Account identifier |
+| business_id | Owning business |
+| settlement_currency | Main display and planning currency |
+| available_balance | Procurement funds not reserved |
+| reserved_balance | Funds allocated to obligations or reserve categories |
+| available_to_allocate | Balance available for new reserves |
+| created_at / updated_at | Audit timestamps |
+
+### 2.2 Supplier
+
+Represents a supplier the business pays.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| id | Supplier identifier |
+| business_id | Owning business |
+| name | Supplier display name |
+| country | Supplier country |
+| preferred_currency | Currency supplier expects |
+| payment_terms | Plain-language payment terms |
+| average_invoice_size | Optional planning input |
+| notes | Operator notes |
+
+### 2.3 Obligation
+
+Represents a supplier invoice, payment commitment, purchase agreement, or upcoming procurement payment.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| id | Obligation identifier |
+| business_id | Owning business |
+| supplier_id | Supplier reference |
+| amount | Payment amount |
+| currency | Obligation currency |
+| due_date | Supplier payment due date |
+| status | Draft, due soon, ready, short, paid, cancelled |
+| priority | Low, normal, high |
+| reserved_amount | Funds already reserved |
+| funding_gap | Amount still short |
+| source | Manual, invoice upload, chat/email capture, agreement |
+| source_ref | Optional link to captured agreement or document |
+
+### 2.4 Allocation
+
+Represents funds set aside for a bill or moved into Grow.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| id | Allocation identifier |
+| account_id | Procurement account |
+| obligation_id | Optional obligation reference |
+| category | Bill, freight, inventory, customs, grow, other |
+| amount | Allocated amount |
+| currency | Reserve currency |
+| status | Active, released, applied, cancelled |
+| created_by | Human user who confirmed the action |
+
+### 2.5 ReadinessSnapshot
+
+Represents operational liquidity health at a point in time.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| account_id | Procurement account |
+| window_days | Usually 7, 14, or 30 |
+| total_obligations | Total due in the window |
+| reserved_amount | Funds reserved in the window |
+| funding_gap | Amount still short |
+| readiness_percent | Reserved amount divided by obligations |
+| due_this_week_count | Count of near-term obligations |
+| underfunded_count | Count of short obligations |
+
+### 2.6 Payment
+
+Represents a supplier payment attempt or completed payment.
+
+Core fields:
+
+| Field | Notes |
+|---|---|
+| id | Payment identifier |
+| obligation_id | Obligation being paid |
+| supplier_id | Supplier being paid |
+| amount | Payment amount |
+| currency | Payment currency |
+| status | Draft, confirmed, processing, paid, failed |
+| settlement_status | Internal settlement state |
+| user_visible_reference | Business-friendly reference |
+
+## 3. Product Layers
+
+### 3.1 Account Layer
+
+The Account Layer owns balance display and allocation state.
+
+Responsibilities:
+
+- show available procurement balance
+- show reserved funds
+- calculate available to allocate
+- prevent over-reservation
+- provide account-level audit trail
+
+User-facing labels must avoid wallet language. Use "procurement balance", "reserved", and "available to allocate".
+
+### 3.2 Supplier Layer
+
+The Supplier Layer keeps the supplier record simple and operational.
+
+Responsibilities:
+
+- store supplier details
+- show supplier country and preferred currency
+- summarize payment terms
+- connect suppliers to obligations and payments
+
+Supplier views should help users answer: "Who do I need to pay, when, and how ready am I?"
+
+### 3.3 Obligation Layer
+
+The Obligation Layer tracks money the business expects to pay.
+
+Responsibilities:
+
+- create obligations manually
+- create obligations from invoices
+- create obligations from captured supplier chats/emails
+- show due dates and priority
+- compute per-obligation readiness
+- show whether each obligation is ready, short, due soon, or paid
+
+### 3.4 Grow Layer
+
+The Grow Layer is represented by the piggybank icon. It is where users see extra money not needed for immediate bills and, later, treasury opportunities.
+
+Responsibilities:
+
+- show money needed for bills versus extra money
+- move extra money into Grow
+- later present yield, card, and treasury opportunities in simple language
+- prevent low-literacy users from seeing DeFi-native controls by default
+- audit Grow movements and opportunity selections
+
+Grow actions require human confirmation.
+
+### 3.5 Readiness Layer
+
+The Readiness Layer turns balances and obligations into operational clarity.
+
+Responsibilities:
+
+- calculate readiness percentage for selected windows
+- show funding gaps
+- detect underfunded obligations
+- detect due-soon obligations
+- provide simple warnings
+
+Example output:
+
+> 82% of next 14 days supplier obligations are funded.
+
+### 3.6 Guided UX Layer
+
+The Guided UX Layer is required for low-literacy and non-technical traders.
+
+Responsibilities:
+
+- present large status cards
+- use icons and colors to support meaning
+- minimize text density
+- show one next action at a time
+- confirm every reserve and payment action
+- explain results in plain language
+
+Required simple actions:
+
+- See what needs money
+- Put money aside
+- Pay supplier
+- Mark paid
+
+### 3.7 Settlement Layer
+
+The Settlement Layer integrates Circle/Arc and stablecoin-backed funding, payment, cross-currency, and off-ramp infrastructure.
+
+Responsibilities:
+
+- hold or represent settlement-ready procurement funds
+- accept crypto/stables funding as the MVP funding path
+- orchestrate supplier payment initiation
+- support future cross-currency supplier payout
+- support future off-ramp to bank or local rails
+- support future crypto-backed business card flows
+- update settlement status
+- keep gas, transaction hashes, seed phrases, and trading controls out of primary UX
+- expose only business-level payment state to the app
+
+Internal implementations may track addresses, transaction hashes, or chain events. Primary UX may show deposit QR/copy details only inside the guided "Add stable dollars" flow.
+
+Arc is the intended settlement chain/rail for implementation. Operator and developer tooling should verify the active chain before settlement work begins, but chain details must remain outside the primary product UX.
+
+## 4. Capture and Agreement Workflow
+
+The existing chat/email agreement feature remains, but it is no longer the whole product. It is a capture workflow that helps users turn messy supplier terms into an obligation.
+
+### 4.1 Inputs
+
+Supported inputs:
+
+- pasted supplier chat
+- forwarded email
+- uploaded invoice
+- uploaded purchase document
+- manual form entry
+
+### 4.2 Extraction
+
+The capture workflow extracts:
+
+- supplier name
+- supplier contact if available
+- item or invoice description
+- amount
+- currency
+- due date or delivery window
+- payment terms
+- confidence score
+
+The result becomes an editable obligation or agreement-backed obligation.
+
+### 4.3 Confirmation
+
+For obligations that require stronger trust, Proof Procure may support buyer and supplier confirmation of the same terms.
+
+User-facing language:
+
+- Confirm terms
+- Send to supplier
+- Supplier confirmed
+- Payment ready
+- Delivery confirmed
+- Paid
+
+Avoid user-facing language:
+
+- smart contract
+- onchain
+- deploy
+- gas
+- wallet
+- token
+
+### 4.4 Payment Control
+
+For agreement-backed obligations, controlled release rules may be used behind the scenes.
+
+The user-facing concept is:
+
+> Payment follows the terms both sides confirmed.
+
+The internal settlement mechanism must remain abstracted.
+
+## 5. Readiness Calculations
+
+### 5.1 Account-Level Readiness
+
+For a selected window:
+
+```
+readiness_percent = reserved_amount_for_due_obligations / total_due_obligations
+funding_gap = total_due_obligations - reserved_amount_for_due_obligations
 ```
 
-#### Payment Release Logic (ONCHAIN — NON-NEGOTIABLE)
+Clamp readiness percentage between 0 and 100.
 
-```solidity
-function checkTimeout() external {
-    require(state == State.DELIVERED_PENDING_CONFIRMATION);
-    require(block.timestamp > deliveredAt + confirmationWindow);
-    state = State.COMPLETED;
-    usdc.transfer(spec.supplier, spec.totalAmount);
-    emit PaymentReleased(spec.agreementHash, spec.supplier, spec.totalAmount, "timeout");
-}
-```
+### 5.2 Obligation-Level State
 
-The timeout check is callable by anyone (keeper, backend, either party). The contract itself enforces the condition — no backend trust required.
+Recommended user-visible states:
 
-#### Events
+| State | Meaning |
+|---|---|
+| Ready | Reserved amount covers the obligation |
+| Short | Reserved amount is below required amount |
+| Due soon | Due date is near and not paid |
+| Reserved | Funds have been put aside |
+| Paid | Payment has been completed or marked paid |
 
-```solidity
-event AgreementDeployed(bytes32 indexed agreementHash, address indexed contractAddr);
-event AgreementFunded(bytes32 indexed agreementHash, uint256 amount);
-event DeliveryMarked(bytes32 indexed agreementHash, uint256 timestamp);
-event PaymentReleased(bytes32 indexed agreementHash, address to, uint256 amount, string reason);
-event PaymentRejected(bytes32 indexed agreementHash);
-event AgreementExpired(bytes32 indexed agreementHash);
-event RefundIssued(bytes32 indexed agreementHash, address to, uint256 amount);
-```
+These states should be shown with color, icon, and short text.
 
-### 2.3 Security Considerations
+## 6. Payment Flow
 
-- Reentrancy guards on all payment functions (OpenZeppelin ReentrancyGuard).
-- USDC approval pattern: user approves factory, contract pulls on fund().
-- No ETH handling — USDC only.
-- Access control: buyer/supplier roles enforced per function.
-- Timeout is timestamp-based (Base block.timestamp is sufficiently reliable).
-- Agreement hash verified onchain to prevent spec mutation.
+### 6.1 Add Stable Dollars
 
-## 3. Backend Architecture
+User outcome:
 
-### 3.1 Technology
+- "Money added."
 
-- Node.js (TypeScript)
-- Express or Fastify for API
-- Bull/BullMQ for job queues
-- PostgreSQL for agreement metadata
-- Redis for session/cache
+Technical responsibilities:
 
-### 3.2 API Surface
+- accept or record crypto/stables funding
+- show the simplest possible deposit instruction
+- support QR/copy address inside the add-money flow
+- detect incoming funds
+- update available procurement balance
+- hide gas, transaction hash, and chain language from normal screens
 
-```
-POST   /api/agreements/extract      — submit raw input, get structured extraction
-GET    /api/agreements/:id          — get agreement details
-PATCH  /api/agreements/:id          — edit proposal before ratification
-POST   /api/agreements/:id/ratify   — party confirms (buyer or supplier)
-POST   /api/agreements/:id/deploy   — trigger contract deployment (after dual ratification)
-POST   /api/agreements/:id/fund     — generate funding link/transaction
-POST   /api/agreements/:id/deliver  — supplier marks delivered
-GET    /api/agreements/:id/status   — current state + onchain verification
-GET    /api/agreements/:id/audit    — export audit trail
-```
+### 6.2 Save for Bill
 
-### 3.3 Extraction Pipeline
+User outcome:
 
-```
-Raw input (Telegram/email/web)
-  → Normalize to text payload
-  → Send to Claude with extraction prompt + schema
-  → Validate against AgreementData schema
-  → Score confidence
-  → If confidence < threshold → reject + request clarification
-  → If confidence >= threshold → create DRAFT agreement
-```
+- "Money saved."
 
-### 3.4 Ratification Flow
+Technical responsibilities:
 
-```
-Buyer confirms proposal
-  → Store buyer signature + timestamp
-  → Generate supplier confirmation link
-  → Notify supplier via channel
-Supplier confirms
-  → Verify spec matches buyer's confirmed version
-  → Both ratified → trigger deployment
-```
+- validate sufficient available balance
+- create Allocation
+- update reserved and available balances
+- update readiness snapshot
+- record audit event
 
-## 4. Channel Layer Design
+### 6.3 Initiate Supplier Payment
 
-### 4.1 Telegram Bot
+User outcome:
 
-- Built with grammY or telegraf.
-- Receives messages and forwarded conversations.
-- Sends structured proposal cards with inline buttons (Confirm / Edit / Reject).
-- Pushes status updates at every state transition.
+- "Supplier payment started."
 
-### 4.2 Email Ingestion (mirasettley@gmail.com)
+Technical responsibilities:
 
-- Dedicated inbox: mirasettley@gmail.com
-- Gmail API watch on inbox (poll every 30 seconds or push via Pub/Sub).
-- All incoming emails treated as potential procurement agreements.
-- Parse email body (strip signatures, threads, forwarded headers).
-- Extract sender email → map to buyer or supplier.
-- Extract attachments if present (purchase orders, invoices).
-- Feed cleaned text into extraction pipeline.
-- Reply with confirmation + proposal link.
-- V0: single Gmail account with App Password. V1: custom domain (agreements@proofprocure.com) with SendGrid inbound parse.
+- confirm supplier, amount, and funding source
+- apply reserve if present
+- create Payment
+- call settlement orchestration
+- update obligation state
+- record audit event
 
-### 4.3 Web Fallback
+### 6.4 Mark Paid
 
-- Minimal Next.js or static app.
-- Text area for pasting conversations.
-- Agreement execution surface (view, ratify, fund, confirm delivery).
-- NOT a full web app — channel-first.
+User outcome:
 
-## 5. Wallet Layer Design
+- "This supplier payment is paid."
 
-### 5.1 Self-Managed Embedded Wallets (No Privy)
+Technical responsibilities:
 
-ProofProcure generates deterministic wallets server-side. Users never see keys, addresses, or gas.
+- set obligation to paid
+- release or apply relevant reserve
+- update readiness snapshot
+- record audit event
 
-**Derivation:**
-```
-wallet = eth_wallet_from_seed(SEED + user_email)
-```
+## 7. Backend Services
 
-- Platform holds a single SEED (stored in env, never committed).
-- Each user gets a deterministic wallet derived from `SEED + email`.
-- Wallet address is stable — same email always maps to same address.
-- Private keys never leave the server.
-- Users authenticate via email + OTP or magic link. No passwords.
+### 7.1 Account Service
 
-**Wallet lifecycle:**
-1. User interacts via Telegram or email → system derives their wallet.
-2. When funding is needed → backend constructs + signs the USDC approval + deposit tx.
-3. User clicks "Fund" → backend executes on their behalf.
-4. All signing is server-side. User sees only "Confirm" / "Approve" buttons.
+Owns procurement balances and allocation invariants.
 
-### 5.2 Gas Abstraction (Self-Hosted)
+### 7.2 Supplier Service
 
-- Platform maintains a gas sponsor wallet (funded with ETH on Base).
-- Before any user transaction, backend estimates gas.
-- Backend sends ETH from sponsor wallet to user wallet (just enough for gas).
-- Backend then submits the user's signed transaction.
-- All gas costs covered by platform (V0).
-- Users never see ETH, never see gas, never see wallet addresses.
+Owns supplier profile CRUD and supplier summaries.
 
-### 5.3 Security
+### 7.3 Obligation Service
 
-- SEED stored in environment variable, never in code or git.
-- Private keys exist only in server memory during transaction signing.
-- No keys in database.
-- Rate limiting on wallet derivation to prevent brute force.
+Owns obligation CRUD, due-date logic, priority, and status.
 
-## 6. Database Schema
+### 7.4 Grow Service
 
-### agreements table
+Owns saved bill money, Grow balance, future yield/card opportunities, release, application, and audit events.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| buyer_id | UUID | FK to users |
-| supplier_id | UUID | FK to users |
-| raw_input | text | Original unstructured input |
-| extracted_data | JSONB | Structured agreement fields |
-| confidence_score | float | Extraction confidence |
-| state | enum | Current agreement state |
-| buyer_ratified_at | timestamp | Null until buyer confirms |
-| supplier_ratified_at | timestamp | Null until supplier confirms |
-| contract_address | text | Null until deployed |
-| agreement_hash | text | Keccak256 of canonical spec |
-| confirmation_window | integer | Seconds |
-| delivery_deadline | timestamp | |
-| expiry_timestamp | timestamp | |
-| created_at | timestamp | |
-| updated_at | timestamp | |
+### 7.5 Readiness Service
 
-### users table
+Computes readiness snapshots and warning states.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| email | text | |
-| telegram_id | text | Nullable |
-| privy_did | text | Privy decentralized ID |
-| wallet_address | text | Derived from Privy |
-| role | enum | buyer / supplier / both |
-| created_at | timestamp | |
+### 7.6 Capture Service
 
-### audit_events table
+Owns manual, invoice, chat, and email capture workflows. It may use LLM extraction, but the product should describe the result as term capture, not AI assistance.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| agreement_id | UUID | FK to agreements |
-| event_type | text | State transition name |
-| actor | text | Who triggered |
-| onchain_tx_hash | text | Nullable until confirmed onchain |
-| metadata | JSONB | Event-specific data |
-| created_at | timestamp | |
+### 7.7 Settlement Service
 
-## 7. Notification Design
+Owns Circle/Arc integration and internal stablecoin-backed funding/payment orchestration. It returns business-level states to the rest of the app.
 
-State transitions trigger notifications to the relevant channel:
+Implementation notes:
 
-| Transition | Notify | Channel |
-|---|---|---|
-| Proposal generated | Buyer | Origin channel |
-| Buyer ratified | Supplier | Email/Telegram |
-| Both ratified → deployed | Both | Origin channels |
-| Contract funded | Supplier | Origin channel |
-| Delivery marked | Buyer | Origin channel |
-| Payment released | Both | Origin channels |
-| Payment rejected | Both | Origin channels |
-| Expired | Both | Origin channels |
+- Use the ARC CLI from `git+https://github.com/the-canteen-dev/ARC-cli` for developer/operator chain access.
+- Install the CLI with `uv tool install git+https://github.com/the-canteen-dev/ARC-cli`.
+- Verify RPC connectivity and chain identity with `arc-canteen rpc eth_chainId` before settlement integration work.
+- Treat the chain ID check as an operator sanity check, not a user-facing feature.
+- Keep Arc RPC configuration, settlement addresses, and transaction references in server-side configuration and operations logs.
+- MVP funding is stables/crypto-only.
+- User-facing funding flow should be "Add stable dollars" with QR/copy support and a waiting/received state.
 
-## 8. Keeper / Timeout Enforcement
+## 8. API Surface
 
-The smart contract's timeout logic is self-contained. However, a backend keeper should periodically call `checkTimeout()` on contracts in `DELIVERED_PENDING_CONFIRMATION` state where the confirmation window has elapsed. This ensures timely execution even if neither party calls it. The contract's own logic prevents double-release.
-
-## 9. File Structure
+Representative API groups:
 
 ```
-proof-procure/
-├── contracts/
-│   ├── ProofProcureFactory.sol
-│   ├── AgreementContract.sol
-│   └── test/
-│       ├── AgreementContract.t.sol
-│       └── ProofProcureFactory.t.sol
-├── backend/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── extraction/
-│   │   ├── channels/
-│   │   │   ├── telegram/
-│   │   │   ├── gmail/
-│   │   │   └── web/
-│   │   ├── contracts/
-│   │   ├── wallet/
-│   │   │   ├── derive.ts       # deterministic wallet from SEED + email
-│   │   │   ├── sponsor.ts      # gas sponsor wallet + funding
-│   │   │   └── signer.ts       # server-side tx construction + signing
-│   │   ├── notifications/
-│   │   └── db/
-│   ├── package.json
-│   └── tsconfig.json
-├── web/
-│   ├── src/
-│   │   ├── pages/
-│   │   └── components/
-│   └── package.json
-├── docs/
-│   ├── requirements.md
-│   ├── design.md
-│   └── tasks.md
-└── README.md
+GET    /api/account
+POST   /api/account/fund
+
+GET    /api/suppliers
+POST   /api/suppliers
+GET    /api/suppliers/:id
+PATCH  /api/suppliers/:id
+
+GET    /api/obligations
+POST   /api/obligations
+GET    /api/obligations/:id
+PATCH  /api/obligations/:id
+
+POST   /api/allocations
+POST   /api/allocations/:id/release
+GET    /api/grow
+
+GET    /api/readiness
+
+POST   /api/capture/chat
+POST   /api/capture/email
+POST   /api/capture/invoice
+
+POST   /api/payments
+POST   /api/obligations/:id/mark-paid
 ```
+
+Existing agreement endpoints may remain during transition, but future product API naming should use account, suppliers, obligations, allocations, grow, readiness, capture, and payments.
+
+## 9. Data Storage
+
+The data model should support:
+
+- businesses and users
+- procurement accounts
+- suppliers
+- obligations
+- allocations
+- payments
+- readiness snapshots
+- Grow balances and opportunities
+- captured source documents or messages
+- audit events
+
+Internal settlement fields may exist, but must be separated from user-facing response shapes unless needed for operations/admin views.
+
+## 10. Notifications
+
+Notifications should be operational and plain-language.
+
+Examples:
+
+- "Supplier payment is due soon."
+- "You are short for next week."
+- "Money saved for Supplier A."
+- "Supplier payment is ready."
+- "Payment marked paid."
+- "Stable dollars received."
+
+Notifications should avoid infrastructure terminology.
+
+## 11. Visual and Interaction Direction
+
+The app should feel like:
+
+- modern fintech
+- lightweight business banking
+- procurement workflow software
+- operational finance tooling
+
+Design direction:
+
+- dark navy, graphite, and muted green
+- low-noise dashboards
+- minimal charts
+- typography-led clarity
+- strong status indicators
+- simple guided flows for low-literacy users
+
+Avoid:
+
+- crypto dashboard patterns
+- trading charts
+- DeFi-native language
+- dense treasury analytics
+- AI chat surfaces
+
+## 12. Security and Audit
+
+Security requirements:
+
+- human confirmation for money movement
+- audit trail for account funding, reserves, obligation edits, payment initiation, and paid states
+- permission checks by business account
+- internal settlement identifiers protected from primary UX
+- no private keys, gas, transaction hashes, or chain transaction details exposed in primary screens
+- deposit addresses or QR codes appear only inside the guided add-money flow
+
+## 13. Future Expansion
+
+Future features may include:
+
+- FX optimization
+- procurement margin tracking
+- adaptive reserve recommendations
+- supplier payment prioritization
+- liquidity forecasting
+- working capital analytics
+- procurement credit
+- invoice financing
+- cross-currency payout
+- local off-ramp
+- crypto-backed business card
+- Grow yield opportunities
+- ERP integrations
+
+These are not MVP requirements.

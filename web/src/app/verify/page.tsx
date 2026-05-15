@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function VerifyPage() {
-  redirect("/app");
+  redirect("/app/onboarding");
 }
