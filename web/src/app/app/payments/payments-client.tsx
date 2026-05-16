@@ -20,7 +20,7 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
   const canPay = selected && (selected.status === "ready" || selected.status === "short");
 
   async function paySelected() {
-    if (!selected) return;
+    if (!selected || !canPay) return;
     setPaying(true);
     setMessage("Sending payment...");
 
@@ -118,7 +118,7 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
               variant="secondary"
               className="h-10 flex-1 gap-2"
               onClick={paySelected}
-              disabled={!selected || selected.status === "paid" || paying}
+              disabled={!selected || !canPay || paying}
             >
               {canPay ? <ShieldCheck className="size-4" /> : <LockKeyhole className="size-4" />}
               {paying ? "Sending" : "Confirm"}

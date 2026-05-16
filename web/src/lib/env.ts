@@ -15,4 +15,7 @@ export const env = {
   get CIRCLE_WALLET_SET_ID() { return optional("CIRCLE_WALLET_SET_ID"); },
   get CIRCLE_BLOCKCHAIN() { return optional("CIRCLE_BLOCKCHAIN", "ARC-TESTNET"); },
   get DEMO_AUTH_EMAIL() { return optional("DEMO_AUTH_EMAIL", "demo@proofprocure.com"); },
+  get CLOUDFLARE_ACCOUNT_ID() { return optional("CLOUDFLARE_ACCOUNT_ID"); },
+  get CLOUDFLARE_EMAIL_API_TOKEN() { return optional("CLOUDFLARE_EMAIL_API_TOKEN"); },
+  get PROOF_PROCURE_EMAIL_FROM() { return optional("PROOF_PROCURE_EMAIL_FROM", "login@proofprocure.com"); },
 };

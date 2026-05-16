@@ -92,10 +92,17 @@ function localState(): LocalState {
   return globalStore.__proofProcureStore;
 }
 
+function canUseLocalFallback() {
+  return process.env.NODE_ENV !== "production";
+}
+
 async function withD1<T>(operation: () => Promise<T>, fallback: () => T | Promise<T>): Promise<T> {
   try {
     return await operation();
-  } catch {
+  } catch (error) {
+    if (!canUseLocalFallback()) {
+      throw error;
+    }
     return fallback();
   }
 }
@@ -332,6 +339,29 @@ export async function payBill(user: SessionUser, billId: string) {
   const bills = await listBills(user);
   const bill = bills.find((item) => item.id === billId);
   if (!bill) throw new Error("Bill not found");
+  if (bill.status === "paid") {
+    const existing = await withD1(
+      async () => d1.first<PaymentRecord>(
+        "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? ORDER BY created_at DESC LIMIT 1",
+        [user.id, bill.id]
+      ),
+      () => localState().payments.find((item) => item.user_id === user.id && item.bill_id === bill.id) || null
+    );
+    if (existing) return existing;
+    throw new Error("Bill is already paid");
+  }
+  if (bill.status !== "ready" && bill.status !== "short") {
+    throw new Error("Bill is not ready to pay");
+  }
+
+  const existingPayment = await withD1(
+    async () => d1.first<PaymentRecord>(
+      "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? AND status IN ('confirming', 'sent', 'paid') ORDER BY created_at DESC LIMIT 1",
+      [user.id, bill.id]
+    ),
+    () => localState().payments.find((item) => item.user_id === user.id && item.bill_id === bill.id && ["confirming", "sent", "paid"].includes(item.status)) || null
+  );
+  if (existingPayment) return existingPayment;
 
   const wallet = await getOrCreateWallet(user);
   const arc = await createArcPaymentReference();
