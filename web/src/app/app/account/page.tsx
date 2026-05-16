@@ -38,14 +38,14 @@ export default function AccountPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Your Proof Procure account details.
+          Add money before paying suppliers.
         </p>
       </div>
 
       <div className="rounded-3xl bg-slate-950 p-6 text-white">
         <p className="font-semibold text-white">{email || "Your Account"}</p>
         <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-400">
-          Account address
+          Payment account
         </p>
 
         <div className="mt-4 flex items-center gap-3">
@@ -78,8 +78,8 @@ export default function AccountPage() {
             <p className="font-semibold text-white">Receive USDC</p>
             <p className="mt-1 text-sm text-slate-400">
               {walletStatus === "ready"
-                ? "Share your address or scan the QR code."
-                : "Create your payment account first."}
+                ? "Copy this to add money."
+                : "Your payment account is being prepared."}
             </p>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function AccountPage() {
             <div className="min-w-0 flex-1">
               <p className="font-semibold">Send USDC</p>
               <p className="text-sm text-slate-500">
-                Send to your account address from any wallet or exchange
+                Copy your account details and send stable dollars.
               </p>
             </div>
             <button
@@ -114,7 +114,7 @@ export default function AccountPage() {
             <div className="min-w-0 flex-1">
               <p className="font-semibold">Bank transfer</p>
               <p className="text-sm text-slate-500">
-                Coming soon — wire from your local bank
+                Coming soon: send from your local bank.
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
@@ -132,7 +132,7 @@ export default function AccountPage() {
             <div className="min-w-0 flex-1">
               <p className="font-semibold">Swap</p>
               <p className="text-sm text-slate-500">
-                Convert crypto from another chain
+                Move money from another network.
               </p>
             </div>
             <ArrowRight className="size-4 shrink-0 text-slate-300" />

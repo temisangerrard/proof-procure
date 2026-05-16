@@ -6,9 +6,9 @@ import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "ProofProcure — Procurement agreements that execute themselves",
+  title: "Proof Procure — Supplier payments, kept ready",
   description:
-    "Turn procurement conversations from Telegram, email, and voice notes into structured agreements both parties can ratify, fund, and execute.",
+    "Keep supplier payment terms, reserves, and payment readiness in one simple procurement account.",
 };
 
 export default function RootLayout({

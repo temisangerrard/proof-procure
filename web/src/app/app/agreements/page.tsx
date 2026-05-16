@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, FileText, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, Loader2, ScanText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Agreement {
@@ -87,19 +87,21 @@ export default function AgreementsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Contracts</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Supplier terms
+        </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Smart escrow agreements with your suppliers.
+          Paste a chat or invoice. Check the terms before you send.
         </p>
       </div>
 
       <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-5 text-emerald-600" />
-          <p className="font-semibold">Describe your deal</p>
+          <ScanText className="size-5 text-emerald-600" />
+          <p className="font-semibold">Capture supplier terms</p>
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          Tell us who, what, how much, and when. We&apos;ll extract the terms.
+          We pull out the supplier, amount, date, and payment terms for review.
         </p>
         <textarea
           className="mt-4 h-28 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-4 focus:ring-slate-200"
@@ -124,9 +126,9 @@ export default function AgreementsPage() {
             {creating ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Sparkles className="size-4" />
+              <ScanText className="size-4" />
             )}
-            {creating ? "Extracting terms…" : "Create contract"}
+            {creating ? "Reading terms..." : "Review terms"}
           </Button>
         </div>
       </div>
@@ -149,7 +151,7 @@ export default function AgreementsPage() {
               No contracts yet
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              Describe your first trade deal above.
+              Paste your first supplier chat or invoice above.
             </p>
           </div>
         ) : (

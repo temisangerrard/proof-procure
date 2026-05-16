@@ -54,8 +54,14 @@ export const env = {
   get CIRCLE_WALLET_SET_ID() {
     return optional("CIRCLE_WALLET_SET_ID");
   },
+  get CIRCLE_ENTITY_SECRET() {
+    return optional("CIRCLE_ENTITY_SECRET");
+  },
   get CIRCLE_BLOCKCHAIN() {
     return optional("CIRCLE_BLOCKCHAIN", "ARC-TESTNET");
+  },
+  get CIRCLE_ACCOUNT_TYPE() {
+    return optional("CIRCLE_ACCOUNT_TYPE", "EOA");
   },
   get WALLET_PROVIDER() {
     return optional("WALLET_PROVIDER", "circle");

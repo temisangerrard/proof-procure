@@ -36,6 +36,93 @@ interface CreateAgreementRequest {
   payment_condition?: string;
 }
 
+const EMPTY_TERMS: ExtractedTerms = {
+  supplier_email: "",
+  item: "Untitled",
+  quantity: "0",
+  price: "0",
+  total: "0",
+  currency: "USDC",
+  delivery_window: "",
+  payment_condition: "on_delivery",
+  confidence: 0,
+};
+
+function cleanNumber(value: string | undefined): string {
+  return value?.replace(/,/g, "") ?? "";
+}
+
+function mergeExtractedTerms(
+  primary: ExtractedTerms,
+  fallback: ExtractedTerms,
+): ExtractedTerms {
+  return {
+    supplier_email: primary.supplier_email || fallback.supplier_email,
+    item:
+      primary.item && primary.item !== "Untitled" ? primary.item : fallback.item,
+    quantity:
+      primary.quantity && primary.quantity !== "0"
+        ? primary.quantity
+        : fallback.quantity,
+    price: primary.price && primary.price !== "0" ? primary.price : fallback.price,
+    total: primary.total && primary.total !== "0" ? primary.total : fallback.total,
+    currency: primary.currency || fallback.currency || "USDC",
+    delivery_window: primary.delivery_window || fallback.delivery_window,
+    payment_condition:
+      primary.payment_condition && primary.payment_condition !== "on_delivery"
+        ? primary.payment_condition
+        : fallback.payment_condition,
+    confidence: Math.max(primary.confidence || 0, fallback.confidence || 0),
+  };
+}
+
+function extractTermsFallback(rawInput: string): ExtractedTerms {
+  const text = rawInput.trim();
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? "";
+  const currency =
+    text.match(/\b(USDC|USD|EUR|GBP|NGN|CNY|CNH|AED|TRY|INR|VND)\b/i)?.[1]?.toUpperCase() ??
+    "USDC";
+  const totalMatch =
+    text.match(
+      /(?:total|for|amount|pay|payment)\D{0,24}(?:[$€£]\s*)?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ) ?? text.match(/(?:[$€£]\s*)([0-9][0-9,]*(?:\.[0-9]+)?)/);
+  const total = cleanNumber(totalMatch?.[1]) || "0";
+  const quantity =
+    cleanNumber(
+      text.match(/\b([0-9][0-9,]*)\s+(?:cartons?|units?|pieces?|pcs|kg|bags?|boxes?|cases?)\b/i)?.[1],
+    ) || "0";
+  const unitPrice =
+    cleanNumber(
+      text.match(/\b(?:at|unit price|price)\b\D{0,12}(?:[$€£]\s*)?([0-9][0-9,]*(?:\.[0-9]+)?)/i)
+        ?.[1],
+    ) || "0";
+  const delivery =
+    text.match(/(?:delivery(?: date)?|deliver(?:y)? by|arrive(?:s)? by)\D{0,18}([0-9]{4}-[0-9]{2}-[0-9]{2}|[A-Z][a-z]+ \d{1,2}(?:, \d{4})?|\d{1,2}\/\d{1,2}\/\d{2,4})/i)?.[1] ??
+    "";
+  const paymentCondition =
+    text.match(/payment terms?\s*:\s*([^.\n]+)/i)?.[1]?.trim() ??
+    (/\bafter\b.*\bdelivery\b/i.test(text) ? "after delivery" : "on_delivery");
+
+  let item = "Untitled";
+  const itemMatch =
+    text.match(/(?:supply|buying|buy|purchase|purchasing)\s+(.+?)(?:\s+for\s+|\s+at\s+|\.\s|$)/i) ??
+    text.match(/\b([0-9][0-9,]*\s+(?:cartons?|units?|pieces?|pcs|kg|bags?|boxes?|cases?)\s+of\s+.+?)(?:\s+for\s+|\s+at\s+|\.\s|$)/i);
+  if (itemMatch?.[1]) item = itemMatch[1].trim();
+
+  const found = [email, total !== "0", item !== "Untitled", delivery].filter(Boolean).length;
+  return {
+    supplier_email: email,
+    item,
+    quantity,
+    price: unitPrice,
+    total,
+    currency,
+    delivery_window: delivery,
+    payment_condition: paymentCondition,
+    confidence: found >= 4 ? 0.72 : found >= 2 ? 0.45 : 0.2,
+  };
+}
+
 async function extractTerms(rawInput: string): Promise<ExtractedTerms> {
   const prompt = `Extract procurement agreement terms from this conversation. Return JSON only, no markdown.
 
@@ -78,33 +165,13 @@ ${rawInput}`;
   // Extract JSON from response (may be wrapped in markdown code block)
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    return {
-      supplier_email: "",
-      item: "Untitled",
-      quantity: "0",
-      price: "0",
-      total: "0",
-      currency: "USDC",
-      delivery_window: "",
-      payment_condition: "on_delivery",
-      confidence: 0,
-    };
+    return EMPTY_TERMS;
   }
 
   try {
-    return JSON.parse(jsonMatch[0]);
+    return mergeExtractedTerms(JSON.parse(jsonMatch[0]), extractTermsFallback(rawInput));
   } catch {
-    return {
-      supplier_email: "",
-      item: "Untitled",
-      quantity: "0",
-      price: "0",
-      total: "0",
-      currency: "USDC",
-      delivery_window: "",
-      payment_condition: "on_delivery",
-      confidence: 0,
-    };
+    return EMPTY_TERMS;
   }
 }
 
@@ -131,23 +198,15 @@ export async function POST(req: NextRequest) {
   const id = `agr_${nanoid(12)}`;
 
   // Extract terms with AI if raw_input provided
-  let extracted: ExtractedTerms = {
-    supplier_email: "",
-    item: "Untitled",
-    quantity: "0",
-    price: "0",
-    total: "0",
-    currency: "USDC",
-    delivery_window: "",
-    payment_condition: "on_delivery",
-    confidence: 0,
-  };
+  let extracted: ExtractedTerms = { ...EMPTY_TERMS };
 
   if (rawInput) {
+    const fallback = extractTermsFallback(rawInput);
     try {
-      extracted = await extractTerms(rawInput);
+      extracted = mergeExtractedTerms(await extractTerms(rawInput), fallback);
     } catch (err) {
       console.error("Extraction failed:", err);
+      extracted = fallback;
     }
   }
 
@@ -163,8 +222,8 @@ export async function POST(req: NextRequest) {
     body.payment_condition || extracted.payment_condition;
 
   await d1.run(
-    `INSERT INTO agreements (id, buyer_id, supplier_email, item, quantity, price, total, currency, delivery_window, payment_condition, raw_input, status, share_token)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
+    `INSERT INTO agreements (id, buyer_id, supplier_email, item, quantity, price, total, currency, delivery_window, payment_condition, raw_input, confidence, status, share_token)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
     [
       id,
       user.id,
@@ -177,6 +236,7 @@ export async function POST(req: NextRequest) {
       delivery_window,
       payment_condition,
       rawInput,
+      extracted.confidence,
       nanoid(16),
     ],
   );

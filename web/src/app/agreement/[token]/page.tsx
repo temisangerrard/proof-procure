@@ -1,5 +1,5 @@
-import { fetchAgreement } from "@/lib/api";
-import { ProposalView } from "./proposal-view";
+import { d1 } from "@/lib/db";
+import { ProposalView, type PublicAgreement } from "./proposal-view";
 
 export default async function AgreementPage({
   params,
@@ -7,18 +7,24 @@ export default async function AgreementPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const agreement = await d1.first<PublicAgreement>(
+    `SELECT id, supplier_email, item, quantity, price, total, currency,
+            delivery_window, payment_condition, status, confidence,
+            buyer_ratified_at, supplier_ratified_at, created_at, updated_at
+     FROM agreements
+     WHERE share_token = ?
+     LIMIT 1`,
+    [token],
+  );
 
-  let agreement;
-  try {
-    agreement = await fetchAgreement(token);
-  } catch {
+  if (!agreement) {
     return (
-      <main className="flex items-center justify-center min-h-screen p-4">
+      <main className="flex min-h-screen items-center justify-center p-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-red-600">
+          <h1 className="text-xl font-semibold text-rose-600">
             Agreement not found
           </h1>
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-slate-500">
             This link may be invalid or expired.
           </p>
         </div>
