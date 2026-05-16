@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1 } from "@/lib/db";
+import { sendSignInCode } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = ((await req.json()) as any);
+    const { email } = (await req.json()) as Record<string, unknown>;
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
@@ -13,39 +14,10 @@ export async function POST(req: NextRequest) {
 
     await d1.run(
       "INSERT INTO auth_codes (email, code, expires_at) VALUES (?, ?, ?)",
-      [email.toLowerCase(), code, expiresAt]
+      [email.toLowerCase(), code, expiresAt],
     );
 
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) {
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "ProofProcure <onboarding@resend.dev>",
-            to: [email],
-            subject: `${code} is your ProofProcure sign-in code`,
-            html: `
-              <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:40px 20px;">
-                <h2 style="font-size:20px;font-weight:600;margin:0;">Sign in to ProofProcure</h2>
-                <p style="color:#666;margin-top:8px;">Enter this code to continue:</p>
-                <div style="font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0;padding:16px;background:#f5f5f5;border-radius:8px;text-align:center;">${code}</div>
-                <p style="color:#999;font-size:13px;">This code expires in 10 minutes.</p>
-              </div>
-            `,
-          }),
-        });
-      } catch (err) {
-        console.error("Resend error:", err);
-        console.log(`[DEV FALLBACK] OTP for ${email}: ${code}`);
-      }
-    } else {
-      console.log(`[DEV] OTP for ${email}: ${code}`);
-    }
+    await sendSignInCode(email, code);
 
     return NextResponse.json({ sent: true });
   } catch (err) {

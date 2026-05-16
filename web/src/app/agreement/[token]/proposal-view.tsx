@@ -61,7 +61,10 @@ export function ProposalView({
 
   const handleConfirm = () => {
     setConfirmed(true);
-    setStatus({ type: "success", msg: "Agreement confirmed. Awaiting counterparty." });
+    setStatus({
+      type: "success",
+      msg: "Agreement confirmed. Awaiting counterparty.",
+    });
   };
 
   const handleReject = () => {
@@ -84,7 +87,8 @@ export function ProposalView({
         <p className="text-sm text-gray-500 mt-1">
           Status:{" "}
           <span className="font-medium text-gray-700">{agreement.state}</span>
-          {" · "}Confidence: {((agreement.confidence_score ?? 0) * 100).toFixed(0)}%
+          {" · "}Confidence:{" "}
+          {((agreement.confidence_score ?? 0) * 100).toFixed(0)}%
         </p>
       </header>
 
@@ -150,7 +154,7 @@ export function ProposalView({
                   onChange={(e) =>
                     updateField(
                       key,
-                      key === "item" ? e.target.value : Number(e.target.value)
+                      key === "item" ? e.target.value : Number(e.target.value),
                     )
                   }
                   className="block w-full mt-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

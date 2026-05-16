@@ -2,13 +2,13 @@ node_modules/
 .DS_Store
 *.log
 
-# Local Netlify folder
-.netlify
-.env
-
 # Environment files
 .env
 .env.local
 .env.*.local
 *.env
 .claude/worktrees/
+.open-next
+.next
+.wrangler
+*.tsbuildinfo

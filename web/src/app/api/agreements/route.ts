@@ -16,6 +16,26 @@ interface ExtractedTerms {
   confidence: number;
 }
 
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+interface CreateAgreementRequest {
+  raw_input?: string;
+  supplier_email?: string;
+  item?: string;
+  quantity?: string;
+  price?: string;
+  total?: string;
+  currency?: string;
+  delivery_window?: string;
+  payment_condition?: string;
+}
+
 async function extractTerms(rawInput: string): Promise<ExtractedTerms> {
   const prompt = `Extract procurement agreement terms from this conversation. Return JSON only, no markdown.
 
@@ -35,30 +55,39 @@ If a field can't be determined, use empty string "". If confidence < 0.5, still 
 Conversation:
 ${rawInput}`;
 
-  const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${env.GLM_API_KEY}`,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    "https://coding-intl.dashscope.aliyuncs.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.QWEN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "qwen-plus",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 512,
+        temperature: 0.1,
+      }),
     },
-    body: JSON.stringify({
-      model: "glm-4-plus",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 512,
-      temperature: 0.1,
-    }),
-  });
+  );
 
-  const data = ((((await res.json()) as any)) as any);
+  const data = (await res.json()) as ChatCompletionResponse;
   const content = data.choices?.[0]?.message?.content || "";
 
   // Extract JSON from response (may be wrapped in markdown code block)
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return {
-      supplier_email: "", item: "Untitled", quantity: "0",
-      price: "0", total: "0", currency: "USDC",
-      delivery_window: "", payment_condition: "on_delivery", confidence: 0,
+      supplier_email: "",
+      item: "Untitled",
+      quantity: "0",
+      price: "0",
+      total: "0",
+      currency: "USDC",
+      delivery_window: "",
+      payment_condition: "on_delivery",
+      confidence: 0,
     };
   }
 
@@ -66,20 +95,27 @@ ${rawInput}`;
     return JSON.parse(jsonMatch[0]);
   } catch {
     return {
-      supplier_email: "", item: "Untitled", quantity: "0",
-      price: "0", total: "0", currency: "USDC",
-      delivery_window: "", payment_condition: "on_delivery", confidence: 0,
+      supplier_email: "",
+      item: "Untitled",
+      quantity: "0",
+      price: "0",
+      total: "0",
+      currency: "USDC",
+      delivery_window: "",
+      payment_condition: "on_delivery",
+      confidence: 0,
     };
   }
 }
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const result = await d1.query(
     "SELECT * FROM agreements WHERE buyer_id = ? ORDER BY created_at DESC",
-    [user.id]
+    [user.id],
   );
 
   return NextResponse.json({ agreements: result.results });
@@ -87,17 +123,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = ((await req.json()) as any);
+  const body = (await req.json()) as CreateAgreementRequest;
   const rawInput = body.raw_input || "";
   const id = `agr_${nanoid(12)}`;
 
   // Extract terms with AI if raw_input provided
   let extracted: ExtractedTerms = {
-    supplier_email: "", item: "Untitled", quantity: "0",
-    price: "0", total: "0", currency: "USDC",
-    delivery_window: "", payment_condition: "on_delivery", confidence: 0,
+    supplier_email: "",
+    item: "Untitled",
+    quantity: "0",
+    price: "0",
+    total: "0",
+    currency: "USDC",
+    delivery_window: "",
+    payment_condition: "on_delivery",
+    confidence: 0,
   };
 
   if (rawInput) {
@@ -116,17 +159,38 @@ export async function POST(req: NextRequest) {
   const total = body.total || extracted.total;
   const currency = body.currency || extracted.currency;
   const delivery_window = body.delivery_window || extracted.delivery_window;
-  const payment_condition = body.payment_condition || extracted.payment_condition;
+  const payment_condition =
+    body.payment_condition || extracted.payment_condition;
 
   await d1.run(
     `INSERT INTO agreements (id, buyer_id, supplier_email, item, quantity, price, total, currency, delivery_window, payment_condition, raw_input, status, share_token)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
-    [id, user.id, supplier_email, item, quantity, price, total, currency, delivery_window, payment_condition, rawInput, nanoid(16)]
+    [
+      id,
+      user.id,
+      supplier_email,
+      item,
+      quantity,
+      price,
+      total,
+      currency,
+      delivery_window,
+      payment_condition,
+      rawInput,
+      nanoid(16),
+    ],
   );
 
   await d1.run(
     "INSERT INTO audit_events (agreement_id, event_type, actor_id, actor_email, detail) VALUES (?, 'draft_created', ?, ?, ?)",
-    [id, user.id, user.email, extracted.confidence > 0 ? `AI extracted terms (confidence: ${extracted.confidence})` : "Agreement created"]
+    [
+      id,
+      user.id,
+      user.email,
+      extracted.confidence > 0
+        ? `AI extracted terms (confidence: ${extracted.confidence})`
+        : "Agreement created",
+    ],
   );
 
   return NextResponse.json({

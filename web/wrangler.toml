@@ -16,5 +16,12 @@ binding = "DB"
 database_name = "proof-procure-db"
 database_id = "a6e45af5-39b1-45ed-bd4b-23752f35ef85"
 
+[[send_email]]
+name = "EMAIL"
+remote = true
+
 [vars]
-BASE_RPC_URL = "https://mainnet.base.org"
+ARC_RPC_URL = "https://mainnet.base.org"
+RESEND_FROM = "onboarding@resend.dev"
+FACTORY_CONTRACT_ADDRESS = "0x84a52e5bb4831d1171cc870f3621cf376fe50933"
+USDC_CONTRACT_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"

@@ -44,7 +44,7 @@ export const SEED_AGREEMENTS: Agreement[] = [
     state: "RATIFIED",
     counterparty: "Priya Sharma Textiles",
     counterparty_role: "supplier",
-    item: "Cotton Fabric Roll (60\" width, white)",
+    item: 'Cotton Fabric Roll (60" width, white)',
     quantity: 200,
     price: 8.5,
     currency: "USD",
@@ -108,7 +108,9 @@ export function getAuditTimeline(agreement: Agreement): AuditEvent[] {
       id: "ev_2",
       event_type: "TERMS_EXTRACTED",
       actor: "system",
-      created_at: new Date(new Date(agreement.created_at).getTime() + 30000).toISOString(),
+      created_at: new Date(
+        new Date(agreement.created_at).getTime() + 30000,
+      ).toISOString(),
       label: "Terms extracted from conversation",
     },
   ];
@@ -133,22 +135,34 @@ export function getAuditTimeline(agreement: Agreement): AuditEvent[] {
     });
   }
 
-  if (["FUNDED", "DELIVERED_PENDING_CONFIRMATION", "COMPLETED"].includes(agreement.state)) {
+  if (
+    ["FUNDED", "DELIVERED_PENDING_CONFIRMATION", "COMPLETED"].includes(
+      agreement.state,
+    )
+  ) {
     events.push({
       id: "ev_5",
       event_type: "AGREEMENT_FUNDED",
       actor: agreement.buyer.name,
-      created_at: new Date(new Date(agreement.supplier_ratified_at || agreement.created_at).getTime() + 86400000).toISOString(),
+      created_at: new Date(
+        new Date(
+          agreement.supplier_ratified_at || agreement.created_at,
+        ).getTime() + 86400000,
+      ).toISOString(),
       label: "Agreement funded",
     });
   }
 
-  if (["DELIVERED_PENDING_CONFIRMATION", "COMPLETED"].includes(agreement.state)) {
+  if (
+    ["DELIVERED_PENDING_CONFIRMATION", "COMPLETED"].includes(agreement.state)
+  ) {
     events.push({
       id: "ev_6",
       event_type: "DELIVERY_MARKED",
       actor: agreement.supplier.name,
-      created_at: new Date(new Date(agreement.delivery_window.end).getTime()).toISOString(),
+      created_at: new Date(
+        new Date(agreement.delivery_window.end).getTime(),
+      ).toISOString(),
       label: "Delivery marked by supplier",
     });
   }
@@ -158,7 +172,9 @@ export function getAuditTimeline(agreement: Agreement): AuditEvent[] {
       id: "ev_7",
       event_type: "PAYMENT_RELEASED",
       actor: "system",
-      created_at: new Date(new Date(agreement.delivery_window.end).getTime() + 86400000).toISOString(),
+      created_at: new Date(
+        new Date(agreement.delivery_window.end).getTime() + 86400000,
+      ).toISOString(),
       label: "Payment released",
     });
   }

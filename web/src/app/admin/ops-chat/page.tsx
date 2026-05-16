@@ -17,6 +17,15 @@ interface ActionProposal {
   status?: "pending" | "executed" | "rejected";
 }
 
+interface OpsChatResponse {
+  content?: string;
+  action?: ActionProposal;
+}
+
+interface ExecuteActionResponse {
+  message?: string;
+}
+
 export default function OpsChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -38,19 +47,25 @@ export default function OpsChatPage() {
       const res = await fetch("/api/admin/ops-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({
+          messages: [...messages, userMsg].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
       });
-      const data = ((await res.json()) as any);
-
-      const d = data as any;
+      const data = (await res.json()) as OpsChatResponse;
       const assistantMsg: Message = {
         role: "assistant",
-        content: d.content || "",
-        action: d.action || undefined,
+        content: data.content || "",
+        action: data.action || undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Try again." }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Something went wrong. Try again." },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -62,7 +77,11 @@ export default function OpsChatPage() {
 
     if (!confirm) {
       setMessages((prev) =>
-        prev.map((m, i) => (i === msgIndex ? { ...m, action: { ...m.action!, status: "rejected" } } : m))
+        prev.map((m, i) =>
+          i === msgIndex
+            ? { ...m, action: { ...m.action!, status: "rejected" } }
+            : m,
+        ),
       );
       return;
     }
@@ -73,15 +92,25 @@ export default function OpsChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(msg.action),
       });
-      const data = ((await res.json()) as any);
+      const data = (await res.json()) as ExecuteActionResponse;
       setMessages((prev) =>
         prev.map((m, i) =>
-          i === msgIndex ? { ...m, action: { ...m.action!, status: "executed" }, content: m.content + `\n\n✓ ${(data as any).message || "Done."}` } : m
-        )
+          i === msgIndex
+            ? {
+                ...m,
+                action: { ...m.action!, status: "executed" },
+                content: m.content + `\n\n✓ ${data.message || "Done."}`,
+              }
+            : m,
+        ),
       );
     } catch {
       setMessages((prev) =>
-        prev.map((m, i) => (i === msgIndex ? { ...m, action: { ...m.action!, status: "rejected" } } : m))
+        prev.map((m, i) =>
+          i === msgIndex
+            ? { ...m, action: { ...m.action!, status: "rejected" } }
+            : m,
+        ),
       );
     }
   };
@@ -98,10 +127,15 @@ export default function OpsChatPage() {
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
             <div
               className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                msg.role === "user" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
+                msg.role === "user"
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-900"
               }`}
             >
               {msg.content}
@@ -109,16 +143,27 @@ export default function OpsChatPage() {
               {/* Action confirmation card */}
               {msg.action && msg.action.status === undefined && (
                 <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                  <p className="text-xs font-medium text-gray-700">Proposed action</p>
+                  <p className="text-xs font-medium text-gray-700">
+                    Proposed action
+                  </p>
                   <p className="mt-1 text-sm font-medium">{msg.action.label}</p>
                   <p className="mt-0.5 text-xs text-gray-400 font-mono">
                     {msg.action.type}({JSON.stringify(msg.action.params)})
                   </p>
                   <div className="mt-2 flex gap-2">
-                    <Button size="xs" onClick={() => executeAction(i, true)} className="gap-1">
+                    <Button
+                      size="xs"
+                      onClick={() => executeAction(i, true)}
+                      className="gap-1"
+                    >
                       <CheckCircle2 className="size-3" /> Confirm
                     </Button>
-                    <Button size="xs" variant="ghost" onClick={() => executeAction(i, false)} className="gap-1">
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => executeAction(i, false)}
+                      className="gap-1"
+                    >
                       <XCircle className="size-3" /> Reject
                     </Button>
                   </div>
@@ -152,11 +197,17 @@ export default function OpsChatPage() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())}
+          onKeyDown={(e) =>
+            e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())
+          }
           placeholder="Ask about system status, agreements, or request an action…"
           className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-gray-900/5"
         />
-        <Button onClick={send} disabled={loading || !input.trim()} className="gap-1.5">
+        <Button
+          onClick={send}
+          disabled={loading || !input.trim()}
+          className="gap-1.5"
+        >
           <Send className="size-4" />
         </Button>
       </div>

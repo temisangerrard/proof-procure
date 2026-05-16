@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { d1 } from "./db";
 import { nanoid } from "nanoid";
+import { d1 } from "./db";
 
 const ADMIN_EMAILS = ["mirasettley@gmail.com", "tagbajoh@gmail.com"];
+export const SESSION_COOKIE = "proof_procure_session";
 
 export interface SessionUser {
   id: string;
@@ -15,13 +16,12 @@ export function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
-  const h = await headers();
-  const email = h.get("cf-access-authenticated-user-email");
-  if (!email) return null;
-
+export async function ensureUser(email: string): Promise<SessionUser> {
   const lower = email.toLowerCase();
-  const existing = await d1.query("SELECT id, role FROM users WHERE email = ?", [lower]);
+  const existing = await d1.query(
+    "SELECT id, role FROM users WHERE email = ?",
+    [lower],
+  );
 
   if (existing.results.length > 0) {
     return {
@@ -33,8 +33,37 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   const id = nanoid();
   const role = isAdminEmail(lower) ? "admin" : "user";
-  await d1.run("INSERT INTO users (id, email, role) VALUES (?, ?, ?)", [id, lower, role]);
+  await d1.run("INSERT INTO users (id, email, role) VALUES (?, ?, ?)", [
+    id,
+    lower,
+    role,
+  ]);
   return { id, email: lower, role };
+}
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  try {
+    const h = await headers();
+    const accessEmail = h.get("cf-access-authenticated-user-email");
+    if (accessEmail) return ensureUser(accessEmail);
+
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!sessionId) return null;
+
+    const row = await d1.first<{ id: string; email: string; role: string }>(
+      `SELECT users.id, users.email, users.role
+       FROM auth_sessions
+       JOIN users ON users.id = auth_sessions.user_id
+       WHERE auth_sessions.id = ? AND auth_sessions.expires_at > datetime('now')
+       LIMIT 1`,
+      [sessionId],
+    );
+
+    return row ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth(): Promise<SessionUser> {

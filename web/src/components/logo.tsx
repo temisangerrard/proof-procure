@@ -33,11 +33,23 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ className, size = "default" }: { className?: string; size?: "sm" | "default" | "lg" }) {
+export function Logo({
+  className,
+  size = "default",
+}: {
+  className?: string;
+  size?: "sm" | "default" | "lg";
+}) {
   const textSize = { sm: "text-sm", default: "text-lg", lg: "text-xl" }[size];
   const iconSize = { sm: "size-4", default: "size-5", lg: "size-6" }[size];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 font-semibold tracking-tight", textSize, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 font-semibold tracking-tight",
+        textSize,
+        className,
+      )}
+    >
       <LogoMark className={iconSize} />
       ProofProcure
     </span>

@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 interface AuthCtx {
   email: string | null;
@@ -9,7 +15,17 @@ interface AuthCtx {
   signOut: () => void;
 }
 
-const AuthContext = createContext<AuthCtx>({ email: null, role: null, loading: true, signOut: () => {} });
+interface MeResponse {
+  email?: string;
+  role?: string;
+}
+
+const AuthContext = createContext<AuthCtx>({
+  email: null,
+  role: null,
+  loading: true,
+  signOut: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
@@ -19,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: any) => {
+      .then((data: MeResponse | null) => {
         if (data?.email) {
           setEmail(data.email);
           setRole(data.role);
@@ -30,7 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = () => {
-    window.location.href = "/cdn-cgi/access/logout";
+    fetch("/api/auth/sign-out", { method: "POST" }).finally(() => {
+      window.location.href = "/login";
+    });
   };
 
   return (
