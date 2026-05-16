@@ -161,17 +161,17 @@ CREATE TABLE IF NOT EXISTS wallet_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_agreements_buyer ON agreements(buyer_id);
-CREATE INDEX idx_agreements_status ON agreements(status);
-CREATE INDEX idx_agreements_share_token ON agreements(share_token);
-CREATE INDEX idx_audit_agreement ON audit_events(agreement_id);
-CREATE INDEX idx_audit_created ON audit_events(created_at);
-CREATE INDEX idx_auth_codes_email ON auth_codes(email, code, used, expires_at);
-CREATE INDEX idx_businesses_user ON businesses(user_id);
-CREATE INDEX idx_wallets_user ON wallets(user_id);
-CREATE INDEX idx_suppliers_user ON suppliers(user_id);
-CREATE INDEX idx_bills_user_status ON bills(user_id, status);
-CREATE INDEX idx_bills_supplier ON bills(supplier_id);
-CREATE INDEX idx_payments_user ON payments(user_id);
-CREATE INDEX idx_payments_bill ON payments(bill_id);
-CREATE INDEX idx_wallet_events_user ON wallet_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agreements_buyer ON agreements(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_agreements_status ON agreements(status);
+CREATE INDEX IF NOT EXISTS idx_agreements_share_token ON agreements(share_token);
+CREATE INDEX IF NOT EXISTS idx_audit_agreement ON audit_events(agreement_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_auth_codes_email ON auth_codes(email, code, used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
+CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_user ON suppliers(user_id);
+CREATE INDEX IF NOT EXISTS idx_bills_user_status ON bills(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_bills_supplier ON bills(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_bill ON payments(bill_id);
+CREATE INDEX IF NOT EXISTS idx_wallet_events_user ON wallet_events(user_id, created_at);
