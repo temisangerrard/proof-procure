@@ -17,40 +17,40 @@ import { Logo } from "@/components/logo";
 
 const steps = [
   {
-    title: "Add money",
-    text: "Put dollars in your account.",
+    title: "Fund with what you have",
+    text: "Send from your local bank or transfer stables. We hold it in dollars, liquid and ready.",
     icon: Plus,
   },
   {
-    title: "Add supplier",
-    text: "Save who you pay.",
+    title: "Add your suppliers",
+    text: "Save every overseas supplier with their currency and country. One place, not scattered across chats and emails.",
     icon: UserPlus,
   },
   {
-    title: "Add bill",
-    text: "Type the amount and date.",
+    title: "Know who is ready",
+    text: "See which bills are funded, which are short, and what is due this week — before your supplier has to chase you.",
     icon: WalletCards,
   },
   {
-    title: "Pay",
-    text: "Check once. Then send.",
+    title: "Pay the same day",
+    text: "Hit pay when goods are confirmed. Dollars move to your supplier immediately. No wire form, no SWIFT wait.",
     icon: Send,
   },
 ];
 
 const proof = [
-  "Dollar balance",
-  "Fast supplier payment",
-  "Bill shows Paid",
-  "Money can grow while waiting",
+  "Fund with local currency or stables",
+  "Suppliers get paid in dollars",
+  "No wire delays or weekend cutoffs",
+  "Idle float earns while it waits",
 ];
 
 const audiences = [
   "Importers",
-  "Traders",
   "Wholesalers",
   "Distributors",
   "Sourcing teams",
+  "Cross-border traders",
 ];
 
 export default function HomePage() {
@@ -82,15 +82,15 @@ export default function HomePage() {
           <div>
             <p className="inline-flex items-center gap-2 rounded-full bg-emerald-400/12 px-3 py-1.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-300/20">
               <Globe2 className="size-4" />
-              Know who to pay next
+              Procurement account for importers
             </p>
             <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-tight text-balance sm:text-6xl lg:text-7xl">
-              Pay suppliers abroad from one dollar account
+              Fund with what you have. Pay your overseas suppliers the same day.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300 text-pretty">
-              Add money, save suppliers, enter bills, and pay when goods are
-              ready. ProofProcure shows Ready, Short, and Paid so nobody has to
-              guess.
+              Load local currency or stables into your procurement account. We
+              keep it in dollars, liquid and ready. Pay any supplier the moment
+              goods are confirmed — no scrambling for FX, no waiting on a wire.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/login">
@@ -98,7 +98,7 @@ export default function HomePage() {
                   size="lg"
                   className="h-12 w-full gap-2 bg-emerald-400 px-5 text-base text-slate-950 hover:bg-emerald-300 sm:w-auto"
                 >
-                  Get started <ArrowRight className="size-4" />
+                  Open your account <ArrowRight className="size-4" />
                 </Button>
               </Link>
             </div>
@@ -136,7 +136,7 @@ export default function HomePage() {
             How it works
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance md:text-5xl">
-            Simple steps. Clear words. One final check.
+            Fund with what you have. Pay immediately when you have to.
           </h2>
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -169,11 +169,13 @@ export default function HomePage() {
               Why use it
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance md:text-5xl">
-              See who is ready, who needs money, and who is paid.
+              Dollar access without the dollar scramble.
             </h2>
             <p className="mt-5 max-w-lg leading-7 text-slate-300 text-pretty">
-              Big buttons and plain status labels show the next step. Every
-              payment gets a final check before money leaves.
+              Importers lose supplier windows because dollars aren&apos;t ready
+              when it matters. ProofProcure keeps your procurement dollars
+              liquid, organised, and ready to move — to the right supplier, in
+              the right currency, the same day.
             </p>
           </div>
 
@@ -181,18 +183,22 @@ export default function HomePage() {
             <ValueRow
               icon={ShieldCheck}
               title="Ready"
-              text="Money is there for this bill."
+              text="Dollars are set aside for this supplier. Pay the moment they confirm."
             />
             <ValueRow
               icon={CircleDollarSign}
               title="Short"
-              text="Add money before paying."
+              text="Not enough for this bill yet. Top up or reallocate before the due date."
             />
-            <ValueRow icon={Banknote} title="Paid" text="Payment is done." />
+            <ValueRow
+              icon={Banknote}
+              title="Paid"
+              text="Cleared. Your supplier has the dollars. Full record kept."
+            />
             <ValueRow
               icon={PiggyBank}
               title="Grow"
-              text="Put waiting money to work."
+              text="Float that isn't needed yet earns a return while it waits."
             />
           </div>
         </div>
@@ -202,14 +208,15 @@ export default function HomePage() {
         <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Built for trade
+              Built for cross-border trade
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance md:text-5xl">
-              One account for supplier money.
+              Fund in. Stay liquid. Pay out immediately.
             </h2>
             <p className="mt-5 max-w-xl leading-7 text-slate-600 text-pretty">
-              Use it to hold dollars, pay suppliers, cash out locally, and grow
-              money that is waiting.
+              No more converting at the wrong moment, wiring too early to lock a
+              rate, or missing a supplier window because your bank was closed.
+              Money lives here and moves when you say.
             </p>
           </div>
           <div className="rounded-3xl bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
@@ -225,10 +232,10 @@ export default function HomePage() {
               </div>
             </div>
             <div className="mt-5 grid gap-3">
-              <ShelfItem label="Earn" value="Get a rate" />
-              <ShelfItem label="Change money" value="Move to local money" />
-              <ShelfItem label="Cash out" value="Withdraw near you" />
-              <ShelfItem label="Card" value="Spend from the account" />
+              <ShelfItem label="Earn" value="Float earns while you wait" />
+              <ShelfItem label="Change money" value="Get an FX quote before you move" />
+              <ShelfItem label="Cash out" value="Withdraw near you when you need it" />
+              <ShelfItem label="Card" value="Spend without a second account" />
             </div>
           </div>
         </div>
@@ -238,13 +245,15 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Ready to pay your next supplier?
+              Stop losing supplier windows because dollars weren&apos;t ready.
             </h2>
-            <p className="mt-1 text-slate-500">Sign up free. No card needed.</p>
+            <p className="mt-1 text-slate-500">
+              Open your procurement account. Fund with what you have.
+            </p>
           </div>
           <Link href="/login">
             <Button size="lg" className="h-12 gap-2 px-5">
-              Get started <ArrowRight className="size-4" />
+              Open your account <ArrowRight className="size-4" />
             </Button>
           </Link>
         </div>
@@ -253,7 +262,7 @@ export default function HomePage() {
       <footer className="border-t border-slate-200 bg-[#f6f8f5]">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>© 2026 ProofProcure</span>
-          <span>Keep supplier money ready before payment.</span>
+          <span>Fund with what you have. Pay any supplier, anywhere, immediately.</span>
         </div>
       </footer>
     </main>

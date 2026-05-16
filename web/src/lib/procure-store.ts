@@ -68,12 +68,23 @@ export interface PaymentRecord {
   reference?: string;
 }
 
+export interface GrowAllocationRecord {
+  id: string;
+  user_id: string;
+  amount: number;
+  status: "allocated" | "withdrawing" | "closed";
+  started_at: string;
+  closed_at?: string;
+  final_yield_amount?: number;
+}
+
 interface LocalState {
   businesses: BusinessRecord[];
   suppliers: SupplierRecord[];
   bills: BillRecord[];
   wallets: WalletRecord[];
   payments: PaymentRecord[];
+  growAllocations: GrowAllocationRecord[];
 }
 
 const globalStore = globalThis as typeof globalThis & {
@@ -88,6 +99,7 @@ function localState(): LocalState {
       bills: [],
       wallets: [],
       payments: [],
+      growAllocations: [],
     };
   }
 
@@ -514,6 +526,86 @@ export async function payBill(user: SessionUser, billId: string) {
         localBill.status = "sent";
       }
       return payment;
+    },
+  );
+}
+
+export async function getActiveGrowAllocation(
+  user: SessionUser,
+): Promise<GrowAllocationRecord | null> {
+  return withD1(
+    async () =>
+      d1.first<GrowAllocationRecord>(
+        "SELECT * FROM grow_allocations WHERE user_id = ? AND status = 'allocated' ORDER BY created_at DESC LIMIT 1",
+        [user.id],
+      ),
+    () =>
+      localState().growAllocations.find(
+        (a) => a.user_id === user.id && a.status === "allocated",
+      ) || null,
+  );
+}
+
+export async function createGrowAllocation(
+  user: SessionUser,
+  amount: number,
+): Promise<GrowAllocationRecord> {
+  const allocation: GrowAllocationRecord = {
+    id: nanoid(),
+    user_id: user.id,
+    amount,
+    status: "allocated",
+    started_at: new Date().toISOString(),
+  };
+
+  return withD1(
+    async () => {
+      await d1.run(
+        `INSERT INTO grow_allocations (id, user_id, amount, status, started_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [allocation.id, user.id, amount, allocation.status, allocation.started_at],
+      );
+      return allocation;
+    },
+    () => {
+      localState().growAllocations.unshift(allocation);
+      return allocation;
+    },
+  );
+}
+
+export async function withdrawGrowAllocation(
+  user: SessionUser,
+  allocationId: string,
+): Promise<GrowAllocationRecord> {
+  const allocation = await withD1(
+    async () =>
+      d1.first<GrowAllocationRecord>(
+        "SELECT * FROM grow_allocations WHERE id = ? AND user_id = ? AND status = 'allocated' LIMIT 1",
+        [allocationId, user.id],
+      ),
+    () =>
+      localState().growAllocations.find(
+        (a) => a.id === allocationId && a.user_id === user.id && a.status === "allocated",
+      ) || null,
+  );
+  if (!allocation) throw new Error("Allocation not found");
+
+  return withD1(
+    async () => {
+      await d1.run(
+        "UPDATE grow_allocations SET status = 'closed', closed_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+        [allocationId, user.id],
+      );
+      return { ...allocation, status: "closed" as const };
+    },
+    () => {
+      const a = localState().growAllocations.find((item) => item.id === allocationId);
+      if (a) {
+        a.status = "closed";
+        a.closed_at = new Date().toISOString();
+      }
+      return { ...allocation, status: "closed" as const };
     },
   );
 }

@@ -173,6 +173,18 @@ CREATE TABLE IF NOT EXISTS wallet_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS grow_allocations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  amount REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'allocated' CHECK (status IN ('allocated', 'withdrawing', 'closed')),
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at TEXT,
+  final_yield_amount REAL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_agreements_buyer ON agreements(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_agreements_status ON agreements(status);
 CREATE INDEX IF NOT EXISTS idx_agreements_share_token ON agreements(share_token);
@@ -188,3 +200,4 @@ CREATE INDEX IF NOT EXISTS idx_bills_supplier ON bills(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_bill ON payments(bill_id);
 CREATE INDEX IF NOT EXISTS idx_wallet_events_user ON wallet_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_grow_allocations_user ON grow_allocations(user_id, status);

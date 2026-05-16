@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { label: "Suppliers", href: "/app/suppliers", icon: Users },
   { label: "Bills", href: "/app/obligations", icon: FileText },
   { label: "Account", href: "/app/account", icon: Wallet },
-  { label: "Grow", href: "/app/reserves", icon: PiggyBank },
+  { label: "Grow", href: "/app/grow", icon: PiggyBank },
   { label: "Pay", href: "/app/payments", icon: Banknote },
   { label: "More", href: "/app/settings", icon: Settings },
 ];

@@ -123,7 +123,7 @@ export default function AccountPage() {
           </div>
 
           <Link
-            href="/app/reserves"
+            href="/app/grow"
             className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
