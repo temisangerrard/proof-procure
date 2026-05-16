@@ -34,6 +34,11 @@ export default {
     env: Env,
     _ctx: ExecutionContext,
   ): Promise<void> {
+    if (!env.KEEPER_PRIVATE_KEY) {
+      console.log("Keeper: KEEPER_PRIVATE_KEY is not configured, skipping");
+      return;
+    }
+
     const provider = new ethers.JsonRpcProvider(env.ARC_RPC_URL);
     const keeper = new ethers.Wallet(env.KEEPER_PRIVATE_KEY, provider);
 
