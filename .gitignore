@@ -8,6 +8,8 @@ node_modules/
 .env.*.local
 *.env
 .claude/worktrees/
+.circle/
+recovery_file*.dat
 .open-next
 .next
 .wrangler

@@ -1,6 +1,4 @@
-import { Building2, Globe2, Landmark, Settings2 } from "lucide-react";
-import { getSessionUser } from "@/lib/auth";
-import { CircleWalletSetup } from "./circle-wallet-setup";
+import { Building2, CheckCircle2, Globe2, Landmark, Settings2 } from "lucide-react";
 
 const PROFILE = [
   { label: "Company", value: "Adebayo Trading Ltd.", icon: Building2 },
@@ -14,8 +12,6 @@ const PROFILE = [
 ];
 
 export default async function SettingsPage() {
-  const user = await getSessionUser();
-
   return (
     <div className="space-y-6">
       <div>
@@ -41,7 +37,19 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <CircleWalletSetup email={user?.email} />
+      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="flex items-start gap-4">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            <CheckCircle2 className="size-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Payment account</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Created from your Proof Procure sign-in. Use Account to add money.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="rounded-2xl bg-slate-950 p-5 text-white">
         <p className="text-sm font-medium text-emerald-300">
