@@ -13,7 +13,19 @@ const TOOLS: OpenAITool[] = [
         type: "object",
         properties: {
           agreement_id: { type: "string", description: "The agreement ID" },
-          status: { type: "string", enum: ["draft", "ratified", "funded", "delivered", "confirmed", "payment_released", "rejected", "expired"] },
+          status: {
+            type: "string",
+            enum: [
+              "draft",
+              "ratified",
+              "funded",
+              "delivered",
+              "confirmed",
+              "payment_released",
+              "rejected",
+              "expired",
+            ],
+          },
         },
         required: ["agreement_id", "status"],
       },
@@ -57,11 +69,38 @@ interface OpenAITool {
   };
 }
 
+interface OpsChatMessage {
+  role: string;
+  content: string;
+}
+
+interface OpsChatRequest {
+  messages?: OpsChatMessage[];
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      tool_calls?: Array<{
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }>;
+    };
+  }>;
+}
+
 async function buildContext() {
   const [counts, recent, users, events] = await d1.batch([
     { sql: "SELECT status, COUNT(*) as count FROM agreements GROUP BY status" },
-    { sql: "SELECT id, item, status, total, supplier_email, created_at FROM agreements ORDER BY created_at DESC LIMIT 10" },
-    { sql: "SELECT id, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 10" },
+    {
+      sql: "SELECT id, item, status, total, supplier_email, created_at FROM agreements ORDER BY created_at DESC LIMIT 10",
+    },
+    {
+      sql: "SELECT id, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 10",
+    },
     { sql: "SELECT * FROM audit_events ORDER BY created_at DESC LIMIT 10" },
   ]);
 
@@ -74,9 +113,10 @@ Recent audit events: ${JSON.stringify(events.results)}`;
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || user.role !== "admin")
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { messages } = ((await req.json()) as any);
+  const { messages = [] } = (await req.json()) as OpsChatRequest;
   const context = await buildContext();
 
   const systemPrompt = `You are the ProofProcure ops assistant. You help admins monitor and manage the procurement agreement system.
@@ -91,14 +131,15 @@ Keep responses concise and operational. No marketing language. Reference specifi
     { role: "system", content: systemPrompt },
     ...messages.map((m: { role: string; content: string }) => ({
       role: m.role === "human" ? "user" : m.role,
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      content:
+        typeof m.content === "string" ? m.content : JSON.stringify(m.content),
     })),
   ];
 
   const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${env.GLM_API_KEY}`,
+      Authorization: `Bearer ${env.GLM_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -109,7 +150,7 @@ Keep responses concise and operational. No marketing language. Reference specifi
     }),
   });
 
-  const data = ((((await res.json()) as any)) as any);
+  const data = (await res.json()) as ChatCompletionResponse;
   const choice = data.choices?.[0];
 
   if (!choice) {

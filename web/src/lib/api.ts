@@ -26,7 +26,7 @@ export interface AgreementResponse {
 }
 
 export async function fetchAgreement(
-  token: string
+  token: string,
 ): Promise<AgreementResponse> {
   const res = await fetch(`${API}/api/agreements/${token}`, {
     cache: "no-store",
@@ -37,7 +37,7 @@ export async function fetchAgreement(
 
 export async function patchAgreement(
   token: string,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
 ): Promise<unknown> {
   const res = await fetch(`${API}/api/agreements/${token}`, {
     method: "PATCH",

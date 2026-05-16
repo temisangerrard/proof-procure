@@ -2,34 +2,59 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 async function getDB(): Promise<D1Database> {
   const { env } = await getCloudflareContext({ async: true });
-  const db = (env as any).DB as D1Database | undefined;
+  const db = (env as { DB?: D1Database }).DB;
   if (!db) throw new Error("D1 binding 'DB' not found in Cloudflare env");
   return db;
 }
 
 export const d1 = {
-  async run(sql: string, params: unknown[] = []): Promise<any> {
+  async run(sql: string, params: unknown[] = []): Promise<D1Result> {
     const db = await getDB();
-    return db.prepare(sql).bind(...params).run();
+    return db
+      .prepare(sql)
+      .bind(...params)
+      .run();
   },
 
-  async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<{ results: T[] }> {
+  async query<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<{ results: T[] }> {
     const db = await getDB();
-    return db.prepare(sql).bind(...params).all<T>();
+    return db
+      .prepare(sql)
+      .bind(...params)
+      .all<T>();
   },
 
-  async first<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
+  async first<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<T | null> {
     const db = await getDB();
-    return db.prepare(sql).bind(...params).first<T>();
+    return db
+      .prepare(sql)
+      .bind(...params)
+      .first<T>();
   },
 
-  async all<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<{ results: T[] }> {
+  async all<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<{ results: T[] }> {
     const db = await getDB();
-    return db.prepare(sql).bind(...params).all<T>();
+    return db
+      .prepare(sql)
+      .bind(...params)
+      .all<T>();
   },
 
-  async batch(statements: { sql: string; params?: unknown[] }[]): Promise<any[]> {
+  async batch(
+    statements: { sql: string; params?: unknown[] }[],
+  ): Promise<D1Result[]> {
     const db = await getDB();
-    return db.batch(statements.map((s) => db.prepare(s.sql).bind(...(s.params || []))));
+    return db.batch(
+      statements.map((s) => db.prepare(s.sql).bind(...(s.params || []))),
+    );
   },
 };

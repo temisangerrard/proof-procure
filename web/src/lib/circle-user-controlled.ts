@@ -21,7 +21,10 @@ export function getCircleBrowserConfig() {
   };
 }
 
-export async function requestCircleEmailOtp(input: { deviceId: string; email: string }) {
+export async function requestCircleEmailOtp(input: {
+  deviceId: string;
+  email: string;
+}) {
   const response = await circleClient().createDeviceTokenForEmailLogin({
     deviceId: input.deviceId,
     email: input.email,
@@ -45,7 +48,10 @@ export async function listCircleWallets(userToken: string) {
   return response.data?.wallets || [];
 }
 
-export async function getCircleWalletBalances(input: { userToken: string; walletId: string }) {
+export async function getCircleWalletBalances(input: {
+  userToken: string;
+  walletId: string;
+}) {
   const response = await circleClient().getWalletTokenBalance({
     userToken: input.userToken,
     walletId: input.walletId,

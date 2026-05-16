@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS businesses (
   country TEXT,
   main_currency TEXT NOT NULL DEFAULT 'USD',
   supplier_countries TEXT,
+  industry_type TEXT,
+  product_categories TEXT,
+  deal_size TEXT,
+  supplier_count TEXT,
+  payment_method TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -99,7 +104,7 @@ CREATE TABLE IF NOT EXISTS wallets (
   provider TEXT NOT NULL DEFAULT 'circle',
   provider_user_id TEXT,
   provider_wallet_id TEXT,
-  address TEXT NOT NULL,
+  address TEXT,
   chain TEXT NOT NULL DEFAULT 'arc-testnet',
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'ready' CHECK (status IN ('pending', 'ready', 'blocked')),

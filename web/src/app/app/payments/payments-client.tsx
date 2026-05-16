@@ -1,23 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Banknote, CheckCircle2, LockKeyhole, Send, ShieldCheck } from "lucide-react";
+import {
+  Banknote,
+  CheckCircle2,
+  LockKeyhole,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatMoney } from "@/lib/procurement-demo";
 import type { BillRecord } from "@/lib/procure-store";
 
-export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] }) {
+export function PaymentsClient({
+  initialBills,
+}: {
+  initialBills: BillRecord[];
+}) {
   const [bills, setBills] = useState(initialBills);
-  const [selectedId, setSelectedId] = useState(initialBills.find((bill) => bill.status !== "paid")?.id || "");
+  const [selectedId, setSelectedId] = useState(
+    initialBills.find((bill) => bill.status !== "paid")?.id || "",
+  );
   const [paying, setPaying] = useState(false);
   const [message, setMessage] = useState("Check once before sending.");
 
   const payable = bills.filter((bill) => bill.status !== "paid");
   const selected = useMemo(
-    () => bills.find((bill) => bill.id === selectedId) || payable[0] || bills[0],
-    [bills, payable, selectedId]
+    () =>
+      bills.find((bill) => bill.id === selectedId) || payable[0] || bills[0],
+    [bills, payable, selectedId],
   );
-  const canPay = selected && (selected.status === "ready" || selected.status === "short");
+  const canPay =
+    selected && (selected.status === "ready" || selected.status === "short");
 
   async function paySelected() {
     if (!selected || !canPay) return;
@@ -36,8 +50,12 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
       return;
     }
 
-    setBills((current) => current.map((bill) => bill.id === selected.id ? { ...bill, status: "paid", paid_at: new Date().toISOString() } : bill));
-    setMessage("Payment done. Bill is now Paid.");
+    setBills((current) =>
+      current.map((bill) =>
+        bill.id === selected.id ? { ...bill, status: "sent" } : bill,
+      ),
+    );
+    setMessage("Payment started. Waiting for confirmation.");
     setPaying(false);
   }
 
@@ -56,6 +74,7 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
           <div className="divide-y divide-slate-100">
             {bills.map((bill) => {
               const paid = bill.status === "paid";
+              const sent = bill.status === "sent";
               const active = selected?.id === bill.id;
 
               return (
@@ -66,28 +85,53 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{bill.supplier_name || "Supplier"}</p>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${paid ? "bg-slate-100 text-slate-600 ring-slate-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}>
-                        {paid ? <CheckCircle2 className="size-3" /> : <ShieldCheck className="size-3" />}
-                        {paid ? "Paid" : bill.status === "short" ? "Short" : "Ready"}
+                      <p className="font-medium">
+                        {bill.supplier_name || "Supplier"}
+                      </p>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${paid ? "bg-slate-100 text-slate-600 ring-slate-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}
+                      >
+                        {paid ? (
+                          <CheckCircle2 className="size-3" />
+                        ) : (
+                          <ShieldCheck className="size-3" />
+                        )}
+                        {paid
+                          ? "Paid"
+                          : sent
+                            ? "Sent"
+                            : bill.status === "short"
+                              ? "Short"
+                              : "Ready"}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {bill.title} {bill.due_date ? `· Due ${formatDate(bill.due_date)}` : ""}
+                      {bill.title}{" "}
+                      {bill.due_date
+                        ? `· Due ${formatDate(bill.due_date)}`
+                        : ""}
                     </p>
                     <p className="mt-2 text-sm font-semibold tabular-nums">
                       {formatMoney(bill.amount, bill.currency)}
                     </p>
                   </div>
-                  <span className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold ${paid ? "bg-slate-100 text-slate-500" : "bg-slate-950 text-white"}`}>
-                    {paid ? <CheckCircle2 className="size-4" /> : <Send className="size-4" />}
-                    {paid ? "Paid" : "Pick"}
+                  <span
+                    className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold ${paid ? "bg-slate-100 text-slate-500" : "bg-slate-950 text-white"}`}
+                  >
+                    {paid ? (
+                      <CheckCircle2 className="size-4" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    {paid ? "Paid" : sent ? "Sent" : "Pick"}
                   </span>
                 </button>
               );
             })}
             {bills.length === 0 && (
-              <div className="p-5 text-sm text-slate-500">Add a bill first.</div>
+              <div className="p-5 text-sm text-slate-500">
+                Add a bill first.
+              </div>
             )}
           </div>
         </div>
@@ -100,8 +144,18 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
           <p className="mt-2 text-sm leading-6 text-slate-300">{message}</p>
 
           <div className="mt-5 space-y-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-            <ConfirmRow label="Person" value={selected?.supplier_name || "Supplier"} />
-            <ConfirmRow label="Amount" value={selected ? formatMoney(selected.amount, selected.currency) : "$0"} />
+            <ConfirmRow
+              label="Person"
+              value={selected?.supplier_name || "Supplier"}
+            />
+            <ConfirmRow
+              label="Amount"
+              value={
+                selected
+                  ? formatMoney(selected.amount, selected.currency)
+                  : "$0"
+              }
+            />
             <ConfirmRow label="Bill" value={selected?.title || "None"} />
           </div>
 
@@ -110,7 +164,9 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
               <CheckCircle2 className="size-4" />
               Final check
             </p>
-            <p className="mt-1 text-sm">Money leaves only after you press Confirm.</p>
+            <p className="mt-1 text-sm">
+              Money leaves only after you press Confirm.
+            </p>
           </div>
 
           <div className="mt-5 flex gap-2">
@@ -120,10 +176,17 @@ export function PaymentsClient({ initialBills }: { initialBills: BillRecord[] })
               onClick={paySelected}
               disabled={!selected || !canPay || paying}
             >
-              {canPay ? <ShieldCheck className="size-4" /> : <LockKeyhole className="size-4" />}
+              {canPay ? (
+                <ShieldCheck className="size-4" />
+              ) : (
+                <LockKeyhole className="size-4" />
+              )}
               {paying ? "Sending" : "Confirm"}
             </Button>
-            <Button variant="outline" className="h-10 flex-1 border-white/20 bg-transparent text-white hover:bg-white/10">
+            <Button
+              variant="outline"
+              className="h-10 flex-1 border-white/20 bg-transparent text-white hover:bg-white/10"
+            >
               Cancel
             </Button>
           </div>
@@ -137,7 +200,9 @@ function ConfirmRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm text-slate-300">{label}</span>
-      <span className="text-sm font-semibold tabular-nums text-white">{value}</span>
+      <span className="text-sm font-semibold tabular-nums text-white">
+        {value}
+      </span>
     </div>
   );
 }

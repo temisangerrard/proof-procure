@@ -21,7 +21,11 @@ const NAV = [
   { href: "/admin/ops-chat", label: "Ops Chat", icon: MessageSquareText },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -31,7 +35,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center px-4 border-b border-gray-100">
-        <Link href="/admin"><Logo size="sm" /></Link>
+        <Link href="/admin">
+          <Logo size="sm" />
+        </Link>
       </div>
       <nav className="flex-1 px-2 py-3 space-y-0.5">
         {NAV.map((item) => (
@@ -43,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition",
               isActive(item.href)
                 ? "bg-gray-100 font-medium text-gray-900"
-                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
             )}
           >
             <item.icon className="size-4" />
@@ -69,8 +75,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile sidebar */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/20" onClick={() => setOpen(false)} />
-          <aside className="relative w-56 h-full bg-white shadow-lg">{sidebar}</aside>
+          <div
+            className="absolute inset-0 bg-black/20"
+            onClick={() => setOpen(false)}
+          />
+          <aside className="relative w-56 h-full bg-white shadow-lg">
+            {sidebar}
+          </aside>
         </div>
       )}
 

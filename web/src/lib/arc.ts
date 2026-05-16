@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 import { env } from "./env";
 
 export async function getArcChainId() {
@@ -16,11 +15,23 @@ export async function getArcChainId() {
     });
 
     if (!response.ok) {
-      return { ok: false, chainId: null, error: `RPC returned ${response.status}` };
+      return {
+        ok: false,
+        chainId: null,
+        error: `RPC returned ${response.status}`,
+      };
     }
 
-    const data = await response.json() as { result?: string; error?: { message?: string } };
-    if (!data.result) return { ok: false, chainId: null, error: data.error?.message || "No chain id" };
+    const data = (await response.json()) as {
+      result?: string;
+      error?: { message?: string };
+    };
+    if (!data.result)
+      return {
+        ok: false,
+        chainId: null,
+        error: data.error?.message || "No chain id",
+      };
     return { ok: true, chainId: data.result, error: null };
   } catch (error) {
     return {
@@ -33,12 +44,11 @@ export async function getArcChainId() {
 
 export async function createArcPaymentReference() {
   const chain = await getArcChainId();
-  const txHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
 
   return {
     chainId: chain.chainId,
     chainOk: chain.ok,
-    txHash,
-    reference: `ARC-${nanoid(10).toUpperCase()}`,
+    txHash: "",
+    reference: chain.ok ? `arc:${chain.chainId}:pending` : "arc:unavailable",
   };
 }

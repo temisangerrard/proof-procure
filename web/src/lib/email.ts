@@ -1,29 +1,15 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { env } from "./env";
 
-interface EmailBinding {
-  send(message: {
-    to: string | string[];
-    from: string | { email: string; name: string };
-    subject: string;
-    html?: string;
-    text?: string;
-  }): Promise<{ messageId?: string }>;
-}
+export async function sendSignInCode(
+  to: string,
+  code: string,
+): Promise<boolean> {
+  const resendKey = env.RESEND_API_KEY;
+  if (!resendKey) return false;
 
-async function getEmailBinding(): Promise<EmailBinding | null> {
-  try {
-    const context = await getCloudflareContext({ async: true });
-    return ((context.env as Record<string, unknown>).EMAIL as EmailBinding | undefined) || null;
-  } catch {
-    return null;
-  }
-}
-
-export async function sendSignInCode(to: string, code: string) {
-  const from = env.PROOF_PROCURE_EMAIL_FROM;
+  const from = env.RESEND_FROM;
   const subject = `${code} is your Proof Procure sign-in code`;
-  const text = `Your Proof Procure sign-in code is ${code}. It expires in 10 minutes.`;
+  const text = `Your sign-in code is ${code}. It expires in 10 minutes.`;
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:32px 20px;color:#111827;">
       <p style="font-size:14px;margin:0 0 16px;color:#475569;">Proof Procure sign in</p>
@@ -32,41 +18,25 @@ export async function sendSignInCode(to: string, code: string) {
     </div>
   `;
 
-  const binding = await getEmailBinding();
-  if (binding) {
-    await binding.send({
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Proof Procure <${from}>`,
       to,
-      from: { email: from, name: "Proof Procure" },
       subject,
       html,
       text,
-    });
-    return true;
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Resend error ${res.status}: ${body}`);
   }
 
-  const apiToken = env.CLOUDFLARE_EMAIL_API_TOKEN;
-  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
-  if (apiToken && accountId) {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/email/sending/send`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        from: { address: from, name: "Proof Procure" },
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Cloudflare Email failed with ${response.status}`);
-    }
-    return true;
-  }
-
-  return false;
+  return true;
 }

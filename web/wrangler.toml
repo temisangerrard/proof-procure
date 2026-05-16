@@ -22,4 +22,4 @@ remote = true
 
 [vars]
 BASE_RPC_URL = "https://mainnet.base.org"
-PROOF_PROCURE_EMAIL_FROM = "login@proofprocure.com"
+RESEND_FROM = "onboarding@resend.dev"

@@ -21,12 +21,12 @@ const MONEY_ACTIONS = [
   {
     label: "Add money",
     helper: "Top up",
-    href: "/app/settings",
+    href: "/app/account",
     icon: Plus,
     className: "bg-slate-950 text-white",
   },
   {
-    label: "Add person",
+    label: "Add supplier",
     helper: "Supplier",
     href: "/app/suppliers",
     icon: UserPlus,
@@ -55,11 +55,15 @@ export default async function AppDashboard() {
 
   const unpaid = bills.filter((bill) => bill.status !== "paid");
   const paid = bills.filter((bill) => bill.status === "paid");
-  const short = bills.filter((bill) => bill.status === "short" || bill.status === "draft");
+  const short = bills.filter(
+    (bill) => bill.status === "short" || bill.status === "draft",
+  );
   const ready = bills.filter((bill) => bill.status === "ready");
   const totalDue = unpaid.reduce((sum, bill) => sum + bill.amount, 0);
   const totalPaid = paid.reduce((sum, bill) => sum + bill.amount, 0);
-  const readiness = unpaid.length ? Math.round((ready.length / unpaid.length) * 100) : 0;
+  const readiness = unpaid.length
+    ? Math.round((ready.length / unpaid.length) * 100)
+    : 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -70,14 +74,16 @@ export default async function AppDashboard() {
               <CheckCircle2 className="size-4" />
               {unpaid.length ? `${readiness}% ready` : "Start here"}
             </p>
-            <p className="mt-6 text-sm font-medium text-slate-300">Bills to pay</p>
+            <p className="mt-6 text-sm font-medium text-slate-300">
+              Bills to pay
+            </p>
             <h1 className="mt-2 text-5xl font-semibold tracking-tight tabular-nums md:text-7xl">
               {formatMoney(totalDue)}
             </h1>
           </div>
 
           <div className="grid min-w-64 gap-3 rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
-            <MiniBalance label="People" value={`${suppliers.length}`} />
+            <MiniBalance label="Suppliers" value={`${suppliers.length}`} />
             <MiniBalance label="Bills" value={`${bills.length}`} />
             <MiniBalance label="Paid" value={formatMoney(totalPaid)} />
           </div>
@@ -138,17 +144,24 @@ function EmptyStart({ hasSupplier }: { hasSupplier: boolean }) {
   return (
     <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
       <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-        {hasSupplier ? <WalletCards className="size-7" /> : <UserPlus className="size-7" />}
+        {hasSupplier ? (
+          <WalletCards className="size-7" />
+        ) : (
+          <UserPlus className="size-7" />
+        )}
       </div>
       <h2 className="mt-5 text-2xl font-semibold tracking-tight">
         {hasSupplier ? "Add your first bill" : "Add your first supplier"}
       </h2>
       <p className="mt-2 max-w-lg text-slate-500">
-        {hasSupplier ? "Enter the amount and pay date so the app can show Ready, Short, or Paid." : "Start with one person or company you pay. Then add a bill."}
+        {hasSupplier
+          ? "Enter the amount and pay date so the app can show Ready, Short, or Paid."
+          : "Start with one person or company you pay. Then add a bill."}
       </p>
       <Link href={hasSupplier ? "/app/new" : "/app/onboarding"}>
         <Button className="mt-5 h-12 gap-2 px-5">
-          {hasSupplier ? "Add bill" : "Start setup"} <ArrowRight className="size-4" />
+          {hasSupplier ? "Add bill" : "Start setup"}{" "}
+          <ArrowRight className="size-4" />
         </Button>
       </Link>
     </section>
@@ -168,6 +181,8 @@ function PaymentRow({ bill }: { bill: BillRecord }) {
   const paid = bill.status === "paid";
   const short = bill.status === "short" || bill.status === "draft";
   const label = paid ? "Paid" : short ? "Short" : "Ready";
+  const sent = bill.status === "sent";
+  const displayLabel = sent ? "Sent" : label;
   const Icon = paid ? CheckCircle2 : short ? AlertTriangle : ShieldCheck;
   const style = paid
     ? "bg-slate-100 text-slate-600 ring-slate-200"
@@ -179,9 +194,11 @@ function PaymentRow({ bill }: { bill: BillRecord }) {
     <div className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ring-1 ${style}`}>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ring-1 ${style}`}
+          >
             <Icon className="size-4" />
-            {label}
+            {displayLabel}
           </span>
           <p className="font-semibold">{bill.supplier_name || "Supplier"}</p>
         </div>
@@ -193,7 +210,10 @@ function PaymentRow({ bill }: { bill: BillRecord }) {
         <p className="text-xl font-semibold tabular-nums">
           {formatMoney(bill.amount, bill.currency)}
         </p>
-        <Link href="/app/payments" className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-950">
+        <Link
+          href="/app/payments"
+          className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-950"
+        >
           Pay <ArrowRight className="size-3.5" />
         </Link>
       </div>

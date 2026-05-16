@@ -1,15 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, KeyRound, Mail, ShieldCheck, WalletCards } from "lucide-react";
+import {
+  CheckCircle2,
+  KeyRound,
+  Mail,
+  ShieldCheck,
+  WalletCards,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type W3SSdkType = {
   getDeviceId: () => Promise<string>;
-  updateConfigs: (configs?: unknown, onLoginComplete?: (error: unknown, result: unknown) => void) => void;
+  updateConfigs: (
+    configs?: unknown,
+    onLoginComplete?: (error: unknown, result: unknown) => void,
+  ) => void;
   verifyOtp: () => void;
-  execute: (challengeId: string, onCompleted?: (error: unknown, result: unknown) => void) => void;
+  execute: (
+    challengeId: string,
+    onCompleted?: (error: unknown, result: unknown) => void,
+  ) => void;
 };
 
 interface LoginResult {
@@ -55,14 +67,22 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
   useEffect(() => {
     async function boot() {
       const configResponse = await fetch("/api/wallet/circle/config");
-      const config = await configResponse.json() as { appId?: string; configured?: boolean };
+      const config = (await configResponse.json()) as {
+        appId?: string;
+        configured?: boolean;
+      };
       setAppId(config.appId || "");
       setConfigured(Boolean(config.configured && config.appId));
 
       const storedUserToken = window.localStorage.getItem("circleUserToken");
-      const storedEncryptionKey = window.localStorage.getItem("circleEncryptionKey");
+      const storedEncryptionKey = window.localStorage.getItem(
+        "circleEncryptionKey",
+      );
       if (storedUserToken && storedEncryptionKey) {
-        setLoginResult({ userToken: storedUserToken, encryptionKey: storedEncryptionKey });
+        setLoginResult({
+          userToken: storedUserToken,
+          encryptionKey: storedEncryptionKey,
+        });
       }
 
       if (!config.appId) return;
@@ -81,11 +101,14 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
         setStatus("Email confirmed. Create wallet next.");
       };
 
-      const sdk = new W3SSdk({ appSettings: { appId: config.appId } }, onLoginComplete) as W3SSdkType;
+      const sdk = new W3SSdk(
+        { appSettings: { appId: config.appId } },
+        onLoginComplete,
+      ) as W3SSdkType;
       sdkRef.current = sdk;
 
       const storedDeviceId = window.localStorage.getItem("circleDeviceId");
-      const id = storedDeviceId || await sdk.getDeviceId();
+      const id = storedDeviceId || (await sdk.getDeviceId());
       window.localStorage.setItem("circleDeviceId", id);
       setDeviceId(id);
     }
@@ -103,7 +126,7 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ deviceId, email: walletEmail }),
     });
-    const data = await response.json() as CircleResponse;
+    const data = (await response.json()) as CircleResponse;
 
     if (!response.ok) {
       setStatus(data.error || "Could not send code.");
@@ -149,7 +172,7 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ userToken: loginResult.userToken }),
     });
-    const data = await response.json() as CircleResponse;
+    const data = (await response.json()) as CircleResponse;
 
     if (!response.ok) {
       setStatus(data.error || "Could not prepare wallet.");
@@ -191,7 +214,7 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ userToken: loginResult.userToken }),
     });
-    const data = await response.json() as CircleResponse;
+    const data = (await response.json()) as CircleResponse;
 
     if (!response.ok) {
       setStatus(data.error || "Could not load wallet.");
@@ -207,7 +230,9 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
     <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
       <div className="border-b border-slate-100 px-5 py-4">
         <h2 className="font-semibold">Payment account</h2>
-        <p className="mt-1 text-sm text-slate-500">Set up the account that sends supplier payments.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Set up the account that sends supplier payments.
+        </p>
       </div>
 
       <div className="grid gap-5 p-5 lg:grid-cols-[1fr_280px]">
@@ -229,14 +254,39 @@ export function CircleWalletSetup({ email = "" }: CircleWalletSetupProps) {
           </label>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <ActionButton icon={Mail} label="Send code" onClick={requestOtp} disabled={!configured || busy || !deviceId || !walletEmail} />
-            <ActionButton icon={KeyRound} label="Enter code" onClick={verifyOtp} disabled={!otpTokens || busy} />
-            <ActionButton icon={ShieldCheck} label="Create wallet" onClick={initializeWallet} disabled={!loginResult || busy} />
-            <ActionButton icon={WalletCards} label="Approve" onClick={createWallet} disabled={!challengeId || busy} />
+            <ActionButton
+              icon={Mail}
+              label="Send code"
+              onClick={requestOtp}
+              disabled={!configured || busy || !deviceId || !walletEmail}
+            />
+            <ActionButton
+              icon={KeyRound}
+              label="Enter code"
+              onClick={verifyOtp}
+              disabled={!otpTokens || busy}
+            />
+            <ActionButton
+              icon={ShieldCheck}
+              label="Create wallet"
+              onClick={initializeWallet}
+              disabled={!loginResult || busy}
+            />
+            <ActionButton
+              icon={WalletCards}
+              label="Approve"
+              onClick={createWallet}
+              disabled={!challengeId || busy}
+            />
           </div>
 
           {loginResult && (
-            <Button variant="outline" className="h-11" onClick={loadWallet} disabled={busy}>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={loadWallet}
+              disabled={busy}
+            >
               Refresh wallet
             </Button>
           )}
@@ -271,7 +321,12 @@ function ActionButton({
   disabled?: boolean;
 }) {
   return (
-    <Button className="h-12 justify-start gap-2" variant="outline" onClick={onClick} disabled={disabled}>
+    <Button
+      className="h-12 justify-start gap-2"
+      variant="outline"
+      onClick={onClick}
+      disabled={disabled}
+    >
       <Icon className="size-4" />
       {label}
     </Button>

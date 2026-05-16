@@ -4,17 +4,24 @@ import { saveOnboarding } from "@/lib/procure-store";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
   const result = await saveOnboarding(user, {
     businessName: String(body.businessName || ""),
     country: String(body.country || ""),
-    mainMoney: String(body.mainMoney || "USD"),
-    buysFrom: String(body.buysFrom || ""),
-    supplierName: String(body.supplierName || ""),
-    billAmount: String(body.billAmount || ""),
-    billDate: String(body.billDate || ""),
+    industryType: String(body.industryType || ""),
+    tradeCorridors: Array.isArray(body.tradeCorridors)
+      ? (body.tradeCorridors as string[])
+      : [],
+    productCategories: Array.isArray(body.productCategories)
+      ? (body.productCategories as string[])
+      : [],
+    dealSize: String(body.dealSize || ""),
+    mainCurrency: String(body.mainCurrency || "USD"),
+    supplierCount: String(body.supplierCount || ""),
+    paymentMethod: String(body.paymentMethod || ""),
   });
 
   return NextResponse.json(result);

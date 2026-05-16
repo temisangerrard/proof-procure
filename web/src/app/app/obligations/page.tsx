@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, FilePlus2, Upload, WalletCards } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  FilePlus2,
+  Upload,
+  WalletCards,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth";
 import { listBills, listSuppliers } from "@/lib/procure-store";
@@ -38,13 +44,17 @@ export default async function ObligationsPage() {
           <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
             <WalletCards className="size-7" />
           </div>
-          <h2 className="mt-5 text-2xl font-semibold tracking-tight">No bills yet</h2>
+          <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+            No bills yet
+          </h2>
           <p className="mt-2 max-w-lg text-slate-500">
-            Add a supplier and bill so the app can show whether payment is Ready, Short, or Paid.
+            Add a supplier and bill so the app can show whether payment is
+            Ready, Short, or Paid.
           </p>
           <Link href={suppliers.length ? "/app/new" : "/app/onboarding"}>
             <Button className="mt-5 h-12 gap-2 px-5">
-              {suppliers.length ? "Add bill" : "Start setup"} <ArrowRight className="size-4" />
+              {suppliers.length ? "Add bill" : "Start setup"}{" "}
+              <ArrowRight className="size-4" />
             </Button>
           </Link>
         </div>
@@ -72,7 +82,8 @@ export default async function ObligationsPage() {
             <div className="divide-y divide-slate-100">
               {bills.map((bill) => {
                 const paid = bill.status === "paid";
-                const short = bill.status === "short" || bill.status === "draft";
+                const short =
+                  bill.status === "short" || bill.status === "draft";
                 const statusClass = paid
                   ? "bg-slate-100 text-slate-600 ring-slate-200"
                   : short
@@ -86,15 +97,21 @@ export default async function ObligationsPage() {
                   >
                     <div className="min-w-0">
                       <p className="font-medium">{bill.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">{bill.source}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {bill.source}
+                      </p>
                     </div>
-                    <p className="text-sm text-slate-600">{bill.supplier_name || "Supplier"}</p>
+                    <p className="text-sm text-slate-600">
+                      {bill.supplier_name || "Supplier"}
+                    </p>
                     <p className="flex items-center gap-1.5 text-sm text-slate-600">
                       <CalendarDays className="size-3.5 text-slate-400" />
                       {bill.due_date ? formatDate(bill.due_date) : "No date"}
                     </p>
                     <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${statusClass}`}>
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${statusClass}`}
+                      >
                         {paid ? "Paid" : short ? "Short" : "Ready"}
                       </span>
                     </div>

@@ -240,5 +240,7 @@ export function getSupplier(id: string) {
 }
 
 export function getObligationsForSupplier(supplierId: string) {
-  return obligations.filter((obligation) => obligation.supplierId === supplierId);
+  return obligations.filter(
+    (obligation) => obligation.supplierId === supplierId,
+  );
 }

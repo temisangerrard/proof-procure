@@ -1,45 +1,97 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  Banknote,
   Building2,
-  CheckCircle2,
   CircleDollarSign,
   Globe2,
-  MapPin,
-  ShieldCheck,
-  UserPlus,
   WalletCards,
+  Wallet,
+  TrendingUp,
+  ArrowDownToLine,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const COUNTRIES = ["China", "Vietnam", "India", "Turkey", "UAE", "Europe", "United States", "Nigeria"];
-const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "AED", "CNY"];
+import { COUNTRIES } from "@/lib/countries";
+import { CURRENCIES } from "@/lib/currencies";
 
 type Step = 0 | 1 | 2 | 3;
+
+const INDUSTRY_TYPES = [
+  { label: "Importer", emoji: "📦" },
+  { label: "Exporter", emoji: "🚢" },
+  { label: "Wholesaler", emoji: "🏪" },
+  { label: "Distributor", emoji: "📮" },
+  { label: "Sourcing Agent", emoji: "🔍" },
+  { label: "Manufacturer", emoji: "🏭" },
+  { label: "Other", emoji: "🔧" },
+];
+
+const CORRIDOR_CODES = ["CN","IN","VN","TR","AE","BD","PK","TH","MY","ID","GB","DE","IT","US"];
+const TRADE_CORRIDORS = [
+  ...CORRIDOR_CODES.map((code) => {
+    const c = COUNTRIES.find((x) => x.code === code);
+    return { code, label: c?.name ?? code, flag: c?.flag ?? "" };
+  }),
+  { code: "OTHER", label: "Other", flag: "🌍" },
+];
+
+const PRODUCT_CATEGORIES = [
+  "Electronics",
+  "Textiles & Apparel",
+  "Food & Agriculture",
+  "Raw Materials",
+  "Auto Parts",
+  "Machinery",
+  "Consumer Goods",
+  "Chemicals",
+  "Building Materials",
+  "Other",
+];
+
+const DEAL_SIZES = ["Under $5k", "$5k–$50k", "$50k–$500k", "Over $500k"];
+
+const SUPPLIER_COUNTS = ["1–5", "6–20", "20+"];
+
+const PAYMENT_METHODS = [
+  "Bank wire",
+  "Cash / informal",
+  "Letter of credit",
+  "Cryptocurrency",
+  "Haven't started",
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    businessName: "",
-    country: "",
-    mainMoney: "USD",
-    buysFrom: "China",
-    supplierName: "",
-    billAmount: "",
-    billDate: "",
-  });
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  const completion = useMemo(() => ((step + 1) / 4) * 100, [step]);
+  const [businessName, setBusinessName] = useState("");
+  const [country, setCountry] = useState("");
+  const [industryType, setIndustryType] = useState("");
 
-  function update(name: keyof typeof form, value: string) {
-    setForm((current) => ({ ...current, [name]: value }));
+  const [tradeCorridors, setTradeCorridors] = useState<string[]>([]);
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [dealSize, setDealSize] = useState("");
+
+  const [mainCurrency, setMainCurrency] = useState("USD");
+  const [supplierCount, setSupplierCount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+
+  const ACCOUNT_ADDRESS = "0x742d35Cc6634C05329Bc7fDc742d...8f3a";
+
+  function toggleArr(
+    arr: string[],
+    setArr: (v: string[]) => void,
+    val: string,
+  ) {
+    setArr(arr.includes(val) ? arr.filter((i) => i !== val) : [...arr, val]);
   }
 
   function next() {
@@ -52,21 +104,49 @@ export default function OnboardingPage() {
 
   async function finish() {
     setSaving(true);
-    window.localStorage.setItem("proofProcureOnboarding", JSON.stringify({ ...form, doneAt: new Date().toISOString() }));
-    await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    router.push("/app");
+    setError("");
+    try {
+      await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          businessName,
+          country,
+          industryType,
+          tradeCorridors,
+          productCategories,
+          dealSize,
+          mainCurrency,
+          supplierCount,
+          paymentMethod,
+        }),
+      });
+    } catch {
+      setError("Could not save your details. You can update them later.");
+    } finally {
+      router.push("/app");
+    }
   }
+
+  async function copyAddress() {
+    await navigator.clipboard.writeText("0x742d35Cc6634C05329Bc7fDc742d8f3a");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const stepCount = 4;
+  const completion = ((step + 1) / stepCount) * 100;
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Set up your account</h1>
-          <p className="mt-1 text-sm text-slate-500">We need a few details before your first payment.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Set up your account
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Step {step + 1} of {stepCount}
+          </p>
         </div>
         <Button variant="ghost" onClick={() => router.push("/app")}>
           Skip
@@ -74,7 +154,10 @@ export default function OnboardingPage() {
       </div>
 
       <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${completion}%` }} />
+        <div
+          className="h-full rounded-full bg-emerald-600 transition-[width]"
+          style={{ width: `${completion}%` }}
+        />
       </div>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -83,23 +166,59 @@ export default function OnboardingPage() {
             <Panel
               icon={Building2}
               title="Your business"
-              text="This name appears on your account."
+              text="This helps us show the right payment options."
             >
-              <Field label="Business name">
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Business name
+                </span>
                 <Input
                   className="h-14 rounded-2xl px-4 text-lg"
-                  placeholder="Example: Ade Import Traders"
-                  value={form.businessName}
-                  onChange={(event) => update("businessName", event.target.value)}
+                  placeholder="e.g. Ade Import Traders"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
                 />
-              </Field>
-              <Field label="Where are you based?">
-                <Select value={form.country} onChange={(value) => update("country", value)} placeholder="Choose country">
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>{country}</option>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Country
+                </span>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-lg font-medium text-slate-950 outline-none transition-colors focus:border-slate-400 focus:ring-4 focus:ring-slate-200"
+                >
+                  <option value="">Choose country</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.flag} {c.name}
+                    </option>
                   ))}
-                </Select>
-              </Field>
+                </select>
+              </label>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Industry type
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {INDUSTRY_TYPES.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => setIndustryType(item.label)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        industryType === item.label
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      <span>{item.emoji}</span> {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </Panel>
           )}
 
@@ -107,41 +226,145 @@ export default function OnboardingPage() {
             <Panel
               icon={Globe2}
               title="Your trade"
-              text="This helps the app show the right payment path."
+              text="We use this to show you better payment paths."
             >
-              <Field label="Where do you buy from most?">
-                <Select value={form.buysFrom} onChange={(value) => update("buysFrom", value)}>
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>{country}</option>
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Where do you buy from?
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {TRADE_CORRIDORS.map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() =>
+                        toggleArr(tradeCorridors, setTradeCorridors, item.code)
+                      }
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        tradeCorridors.includes(item.code)
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      <span>{item.flag}</span> {item.label}
+                    </button>
                   ))}
-                </Select>
-              </Field>
-              <Field label="Main money">
-                <Select value={form.mainMoney} onChange={(value) => update("mainMoney", value)}>
-                  {CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>{currency}</option>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  What do you trade?
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PRODUCT_CATEGORIES.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() =>
+                        toggleArr(productCategories, setProductCategories, item)
+                      }
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        productCategories.includes(item)
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {item}
+                    </button>
                   ))}
-                </Select>
-              </Field>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Typical deal size
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {DEAL_SIZES.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setDealSize(item)}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        dealSize === item
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </Panel>
           )}
 
           {step === 2 && (
             <Panel
-              icon={UserPlus}
-              title="First supplier"
-              text="Add one person or company you pay."
+              icon={CircleDollarSign}
+              title="Your money"
+              text="We'll show your account in the right currency."
             >
-              <Field label="Supplier name">
-                <Input
-                  className="h-14 rounded-2xl px-4 text-lg"
-                  placeholder="Example: Mei Lin Trading"
-                  value={form.supplierName}
-                  onChange={(event) => update("supplierName", event.target.value)}
-                />
-              </Field>
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                You can add phone, email, and payout details later.
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  Main currency
+                </span>
+                <select
+                  value={mainCurrency}
+                  onChange={(e) => setMainCurrency(e.target.value)}
+                  className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-lg font-medium text-slate-950 outline-none transition-colors focus:border-slate-400 focus:ring-4 focus:ring-slate-200"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} — {c.name} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  How many suppliers do you pay regularly?
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {SUPPLIER_COUNTS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSupplierCount(item)}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        supplierCount === item
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  How do you currently pay them?
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_METHODS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPaymentMethod(item)}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        paymentMethod === item
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
               </div>
             </Panel>
           )}
@@ -149,31 +372,83 @@ export default function OnboardingPage() {
           {step === 3 && (
             <Panel
               icon={WalletCards}
-              title="First bill"
-              text="Add one payment you need to make."
+              title="Your account is ready"
+              text="Here is how to fund it."
             >
-              <Field label="Amount">
-                <Input
-                  className="h-14 rounded-2xl px-4 text-lg"
-                  inputMode="decimal"
-                  placeholder="18200"
-                  value={form.billAmount}
-                  onChange={(event) => update("billAmount", event.target.value)}
-                />
-              </Field>
-              <Field label="Pay date">
-                <Input
-                  className="h-14 rounded-2xl px-4 text-lg"
-                  type="date"
-                  value={form.billDate}
-                  onChange={(event) => update("billDate", event.target.value)}
-                />
-              </Field>
+              <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                <p className="font-semibold text-white">
+                  {businessName || "Your Account"}
+                </p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+                  Account address
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <code className="flex-1 truncate rounded-xl bg-white/10 px-3 py-2 text-sm font-mono text-slate-200">
+                    {ACCOUNT_ADDRESS}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition-colors hover:bg-white/20"
+                  >
+                    {copied ? (
+                      <Check className="size-4 text-emerald-400" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <ArrowDownToLine className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Send USDC to this address</p>
+                    <p className="text-sm text-slate-500">
+                      From any wallet or exchange
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 opacity-50">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-500">
+                    <ArrowRight className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Wire transfer coming soon</p>
+                    <p className="text-sm text-slate-500">
+                      Direct bank transfer
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <TrendingUp className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Swap from any wallet</p>
+                    <p className="text-sm text-slate-500">
+                      Convert crypto from another chain
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-sm font-semibold text-amber-600">{error}</p>
+              )}
             </Panel>
           )}
 
           <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button variant="outline" className="h-12 px-5" onClick={back} disabled={step === 0}>
+            <Button
+              variant="outline"
+              className="h-12 px-5"
+              onClick={back}
+              disabled={step === 0}
+            >
               Back
             </Button>
             {step < 3 ? (
@@ -181,20 +456,40 @@ export default function OnboardingPage() {
                 Next <ArrowRight className="size-4" />
               </Button>
             ) : (
-              <Button className="h-12 gap-2 bg-emerald-600 px-5 hover:bg-emerald-700" onClick={finish} disabled={saving}>
-                {saving ? "Saving" : "Open my account"} <CheckCircle2 className="size-4" />
+              <Button
+                className="h-12 gap-2 bg-emerald-600 px-5 hover:bg-emerald-700"
+                onClick={finish}
+                disabled={saving}
+              >
+                {saving ? "Opening…" : "Open my account"}
               </Button>
             )}
           </div>
         </div>
 
         <aside className="rounded-3xl bg-slate-950 p-5 text-white shadow-sm">
-          <p className="text-sm font-semibold text-emerald-300">What happens next</p>
+          <p className="text-sm font-semibold text-emerald-300">What you get</p>
           <div className="mt-5 space-y-3">
-            <SideStep icon={CircleDollarSign} title="Add money" text="Your account shows a dollar balance." />
-            <SideStep icon={ShieldCheck} title="See Ready or Short" text="The app tells you if a bill can be paid." />
-            <SideStep icon={Banknote} title="Pay supplier" text="Check once, then send." />
-            <SideStep icon={MapPin} title="Track result" text="The bill changes to Paid." />
+            <SideFeature
+              icon={ArrowRight}
+              title="Supplier payments"
+              text="Pay anyone, anywhere"
+            />
+            <SideFeature
+              icon={CircleDollarSign}
+              title="Hold dollars"
+              text="Protect against local currency drops"
+            />
+            <SideFeature
+              icon={TrendingUp}
+              title="Grow idle money"
+              text="Put reserves to work"
+            />
+            <SideFeature
+              icon={Wallet}
+              title="Local cash out"
+              text="Convert near you (coming soon)"
+            />
           </div>
         </aside>
       </section>
@@ -225,39 +520,7 @@ function Panel({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-sm font-semibold text-slate-700">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  children,
-  placeholder,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  children: React.ReactNode;
-  placeholder?: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-lg font-medium text-slate-950 outline-none transition-colors focus:border-slate-400 focus:ring-4 focus:ring-slate-200"
-    >
-      {placeholder && <option value="">{placeholder}</option>}
-      {children}
-    </select>
-  );
-}
-
-function SideStep({
+function SideFeature({
   icon: Icon,
   title,
   text,

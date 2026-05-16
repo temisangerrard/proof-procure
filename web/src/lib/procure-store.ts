@@ -48,7 +48,7 @@ export interface WalletRecord {
   provider: string;
   provider_user_id?: string;
   provider_wallet_id?: string;
-  address: string;
+  address?: string;
   chain: string;
   currency: string;
   status: string;
@@ -76,7 +76,9 @@ interface LocalState {
   payments: PaymentRecord[];
 }
 
-const globalStore = globalThis as typeof globalThis & { __proofProcureStore?: LocalState };
+const globalStore = globalThis as typeof globalThis & {
+  __proofProcureStore?: LocalState;
+};
 
 function localState(): LocalState {
   if (!globalStore.__proofProcureStore) {
@@ -96,7 +98,10 @@ function canUseLocalFallback() {
   return process.env.NODE_ENV !== "production";
 }
 
-async function withD1<T>(operation: () => Promise<T>, fallback: () => T | Promise<T>): Promise<T> {
+async function withD1<T>(
+  operation: () => Promise<T>,
+  fallback: () => T | Promise<T>,
+): Promise<T> {
   try {
     return await operation();
   } catch (error) {
@@ -107,37 +112,48 @@ async function withD1<T>(operation: () => Promise<T>, fallback: () => T | Promis
   }
 }
 
-export async function saveOnboarding(user: SessionUser, input: {
-  businessName: string;
-  country: string;
-  mainMoney: string;
-  buysFrom: string;
-  supplierName: string;
-  billAmount: string;
-  billDate: string;
-}) {
-  const supplier = await createSupplier(user, {
-    name: input.supplierName || "First supplier",
-    country: input.buysFrom || "",
-    currency: input.mainMoney || "USD",
-  });
-
-  const bill = await createBill(user, {
-    supplierId: supplier.id,
-    title: "First supplier payment",
-    amount: Number(input.billAmount || 0),
-    currency: input.mainMoney || "USD",
-    dueDate: input.billDate || "",
-    note: "Added during setup",
+export async function saveOnboarding(
+  user: SessionUser,
+  input: {
+    businessName: string;
+    country: string;
+    industryType: string;
+    tradeCorridors: string[];
+    productCategories: string[];
+    dealSize: string;
+    mainCurrency: string;
+    supplierCount: string;
+    paymentMethod: string;
+  },
+) {
+  const tradeCorridorsJson = JSON.stringify(input.tradeCorridors);
+  const profileJson = JSON.stringify({
+    industryType: input.industryType,
+    productCategories: input.productCategories,
+    dealSize: input.dealSize,
+    supplierCount: input.supplierCount,
+    paymentMethod: input.paymentMethod,
   });
 
   await withD1(
     async () => {
       const id = nanoid();
       await d1.run(
-        `INSERT INTO businesses (id, user_id, name, country, main_currency, supplier_countries)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, user.id, input.businessName || "My business", input.country || "", input.mainMoney || "USD", input.buysFrom || ""]
+        `INSERT INTO businesses (id, user_id, name, country, main_currency, supplier_countries, industry_type, product_categories, deal_size, supplier_count, payment_method)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          user.id,
+          input.businessName || "My business",
+          input.country || "",
+          input.mainCurrency || "USD",
+          tradeCorridorsJson,
+          input.industryType || "",
+          JSON.stringify(input.productCategories),
+          input.dealSize || "",
+          input.supplierCount || "",
+          input.paymentMethod || "",
+        ],
       );
       return true;
     },
@@ -147,14 +163,14 @@ export async function saveOnboarding(user: SessionUser, input: {
         user_id: user.id,
         name: input.businessName || "My business",
         country: input.country || "",
-        main_currency: input.mainMoney || "USD",
-        supplier_countries: input.buysFrom || "",
+        main_currency: input.mainCurrency || "USD",
+        supplier_countries: tradeCorridorsJson,
       });
       return true;
-    }
+    },
   );
 
-  return { supplier, bill };
+  return { profile: profileJson };
 }
 
 export async function listSuppliers(user: SessionUser) {
@@ -162,15 +178,25 @@ export async function listSuppliers(user: SessionUser) {
     async () => {
       const rows = await d1.query<SupplierRecord>(
         "SELECT * FROM suppliers WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC",
-        [user.id]
+        [user.id],
       );
       return rows.results;
     },
-    () => localState().suppliers.filter((supplier) => supplier.user_id === user.id)
+    () =>
+      localState().suppliers.filter((supplier) => supplier.user_id === user.id),
   );
 }
 
-export async function createSupplier(user: SessionUser, input: { name: string; country?: string; currency?: string; phone?: string; email?: string }) {
+export async function createSupplier(
+  user: SessionUser,
+  input: {
+    name: string;
+    country?: string;
+    currency?: string;
+    phone?: string;
+    email?: string;
+  },
+) {
   const supplier: SupplierRecord = {
     id: nanoid(),
     user_id: user.id,
@@ -187,14 +213,23 @@ export async function createSupplier(user: SessionUser, input: { name: string; c
       await d1.run(
         `INSERT INTO suppliers (id, user_id, name, country, currency, phone, email, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [supplier.id, user.id, supplier.name, supplier.country, supplier.currency, supplier.phone, supplier.email, supplier.status]
+        [
+          supplier.id,
+          user.id,
+          supplier.name,
+          supplier.country,
+          supplier.currency,
+          supplier.phone,
+          supplier.email,
+          supplier.status,
+        ],
       );
       return supplier;
     },
     () => {
       localState().suppliers.unshift(supplier);
       return supplier;
-    }
+    },
   );
 }
 
@@ -207,22 +242,25 @@ export async function listBills(user: SessionUser) {
          LEFT JOIN suppliers ON suppliers.id = bills.supplier_id
          WHERE bills.user_id = ?
          ORDER BY bills.created_at DESC`,
-        [user.id]
+        [user.id],
       );
       return rows.results;
     },
-    () => localState().bills.filter((bill) => bill.user_id === user.id)
+    () => localState().bills.filter((bill) => bill.user_id === user.id),
   );
 }
 
-export async function createBill(user: SessionUser, input: {
-  supplierId: string;
-  title?: string;
-  amount: number;
-  currency?: string;
-  dueDate?: string;
-  note?: string;
-}) {
+export async function createBill(
+  user: SessionUser,
+  input: {
+    supplierId: string;
+    title?: string;
+    amount: number;
+    currency?: string;
+    dueDate?: string;
+    note?: string;
+  },
+) {
   const status = input.amount > 0 ? "short" : "draft";
   const bill: BillRecord = {
     id: nanoid(),
@@ -244,22 +282,42 @@ export async function createBill(user: SessionUser, input: {
       await d1.run(
         `INSERT INTO bills (id, user_id, supplier_id, title, amount, currency, due_date, status, reserved_amount, priority, source, note)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [bill.id, user.id, bill.supplier_id, bill.title, bill.amount, bill.currency, bill.due_date, bill.status, bill.reserved_amount, bill.priority, bill.source, bill.note]
+        [
+          bill.id,
+          user.id,
+          bill.supplier_id,
+          bill.title,
+          bill.amount,
+          bill.currency,
+          bill.due_date,
+          bill.status,
+          bill.reserved_amount,
+          bill.priority,
+          bill.source,
+          bill.note,
+        ],
       );
       return bill;
     },
     () => {
-      const supplier = localState().suppliers.find((item) => item.id === bill.supplier_id);
+      const supplier = localState().suppliers.find(
+        (item) => item.id === bill.supplier_id,
+      );
       localState().bills.unshift({ ...bill, supplier_name: supplier?.name });
       return bill;
-    }
+    },
   );
 }
 
 export async function getOrCreateWallet(user: SessionUser) {
   const existing = await withD1(
-    async () => d1.first<WalletRecord>("SELECT * FROM wallets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", [user.id]),
-    () => localState().wallets.find((wallet) => wallet.user_id === user.id) || null
+    async () =>
+      d1.first<WalletRecord>(
+        "SELECT * FROM wallets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+        [user.id],
+      ),
+    () =>
+      localState().wallets.find((wallet) => wallet.user_id === user.id) || null,
   );
   if (existing) return existing;
 
@@ -281,24 +339,37 @@ export async function getOrCreateWallet(user: SessionUser) {
       await d1.run(
         `INSERT INTO wallets (id, user_id, provider, provider_user_id, provider_wallet_id, address, chain, currency, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [wallet.id, user.id, wallet.provider, wallet.provider_user_id, wallet.provider_wallet_id, wallet.address, wallet.chain, wallet.currency, wallet.status]
+        [
+          wallet.id,
+          user.id,
+          wallet.provider,
+          wallet.provider_user_id,
+          wallet.provider_wallet_id,
+          wallet.address || "",
+          wallet.chain,
+          wallet.currency,
+          wallet.status,
+        ],
       );
       return wallet;
     },
     () => {
       localState().wallets.push(wallet);
       return wallet;
-    }
+    },
   );
 }
 
-export async function recordCircleWallet(user: SessionUser, input: {
-  providerUserId?: string;
-  providerWalletId: string;
-  address: string;
-  chain: string;
-  status?: string;
-}) {
+export async function recordCircleWallet(
+  user: SessionUser,
+  input: {
+    providerUserId?: string;
+    providerWalletId: string;
+    address: string;
+    chain: string;
+    status?: string;
+  },
+) {
   const wallet: WalletRecord = {
     id: nanoid(),
     user_id: user.id,
@@ -315,23 +386,37 @@ export async function recordCircleWallet(user: SessionUser, input: {
     async () => {
       const existing = await d1.first<WalletRecord>(
         "SELECT * FROM wallets WHERE user_id = ? AND provider_wallet_id = ? LIMIT 1",
-        [user.id, input.providerWalletId]
+        [user.id, input.providerWalletId],
       );
       if (existing) return existing;
 
       await d1.run(
         `INSERT INTO wallets (id, user_id, provider, provider_user_id, provider_wallet_id, address, chain, currency, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [wallet.id, user.id, wallet.provider, wallet.provider_user_id, wallet.provider_wallet_id, wallet.address, wallet.chain, wallet.currency, wallet.status]
+        [
+          wallet.id,
+          user.id,
+          wallet.provider,
+          wallet.provider_user_id,
+          wallet.provider_wallet_id,
+          wallet.address,
+          wallet.chain,
+          wallet.currency,
+          wallet.status,
+        ],
       );
       return wallet;
     },
     () => {
-      const existing = localState().wallets.find((item) => item.user_id === user.id && item.provider_wallet_id === input.providerWalletId);
+      const existing = localState().wallets.find(
+        (item) =>
+          item.user_id === user.id &&
+          item.provider_wallet_id === input.providerWalletId,
+      );
       if (existing) return existing;
       localState().wallets.push(wallet);
       return wallet;
-    }
+    },
   );
 }
 
@@ -341,11 +426,15 @@ export async function payBill(user: SessionUser, billId: string) {
   if (!bill) throw new Error("Bill not found");
   if (bill.status === "paid") {
     const existing = await withD1(
-      async () => d1.first<PaymentRecord>(
-        "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? ORDER BY created_at DESC LIMIT 1",
-        [user.id, bill.id]
-      ),
-      () => localState().payments.find((item) => item.user_id === user.id && item.bill_id === bill.id) || null
+      async () =>
+        d1.first<PaymentRecord>(
+          "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? ORDER BY created_at DESC LIMIT 1",
+          [user.id, bill.id],
+        ),
+      () =>
+        localState().payments.find(
+          (item) => item.user_id === user.id && item.bill_id === bill.id,
+        ) || null,
     );
     if (existing) return existing;
     throw new Error("Bill is already paid");
@@ -355,11 +444,18 @@ export async function payBill(user: SessionUser, billId: string) {
   }
 
   const existingPayment = await withD1(
-    async () => d1.first<PaymentRecord>(
-      "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? AND status IN ('confirming', 'sent', 'paid') ORDER BY created_at DESC LIMIT 1",
-      [user.id, bill.id]
-    ),
-    () => localState().payments.find((item) => item.user_id === user.id && item.bill_id === bill.id && ["confirming", "sent", "paid"].includes(item.status)) || null
+    async () =>
+      d1.first<PaymentRecord>(
+        "SELECT * FROM payments WHERE user_id = ? AND bill_id = ? AND status IN ('confirming', 'sent', 'paid') ORDER BY created_at DESC LIMIT 1",
+        [user.id, bill.id],
+      ),
+    () =>
+      localState().payments.find(
+        (item) =>
+          item.user_id === user.id &&
+          item.bill_id === bill.id &&
+          ["confirming", "sent", "paid"].includes(item.status),
+      ) || null,
   );
   if (existingPayment) return existingPayment;
 
@@ -373,7 +469,7 @@ export async function payBill(user: SessionUser, billId: string) {
     wallet_id: wallet.id,
     amount: bill.amount,
     currency: bill.currency,
-    status: "paid",
+    status: "confirming",
     chain: wallet.chain,
     tx_hash: arc.txHash,
     reference: arc.reference,
@@ -385,10 +481,22 @@ export async function payBill(user: SessionUser, billId: string) {
         {
           sql: `INSERT INTO payments (id, user_id, bill_id, supplier_id, wallet_id, amount, currency, status, chain, tx_hash, reference)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [payment.id, user.id, payment.bill_id, payment.supplier_id, payment.wallet_id, payment.amount, payment.currency, payment.status, payment.chain, payment.tx_hash, payment.reference],
+          params: [
+            payment.id,
+            user.id,
+            payment.bill_id,
+            payment.supplier_id,
+            payment.wallet_id,
+            payment.amount,
+            payment.currency,
+            payment.status,
+            payment.chain,
+            payment.tx_hash,
+            payment.reference,
+          ],
         },
         {
-          sql: "UPDATE bills SET status = 'paid', paid_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+          sql: "UPDATE bills SET status = 'sent', updated_at = datetime('now') WHERE id = ? AND user_id = ?",
           params: [bill.id, user.id],
         },
       ]);
@@ -396,12 +504,64 @@ export async function payBill(user: SessionUser, billId: string) {
     },
     () => {
       localState().payments.unshift(payment);
-      const localBill = localState().bills.find((item) => item.id === bill.id && item.user_id === user.id);
+      const localBill = localState().bills.find(
+        (item) => item.id === bill.id && item.user_id === user.id,
+      );
+      if (localBill) {
+        localBill.status = "sent";
+      }
+      return payment;
+    },
+  );
+}
+
+export async function markPaymentPaid(
+  user: SessionUser,
+  input: { paymentId: string; txHash: string },
+) {
+  if (!input.paymentId || !input.txHash) {
+    throw new Error("Payment and transaction reference required");
+  }
+
+  const payment = await withD1(
+    async () =>
+      d1.first<PaymentRecord>(
+        "SELECT * FROM payments WHERE id = ? AND user_id = ? LIMIT 1",
+        [input.paymentId, user.id],
+      ),
+    () =>
+      localState().payments.find(
+        (item) => item.id === input.paymentId && item.user_id === user.id,
+      ) || null,
+  );
+
+  if (!payment) throw new Error("Payment not found");
+
+  return withD1(
+    async () => {
+      await d1.batch([
+        {
+          sql: "UPDATE payments SET status = 'paid', tx_hash = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+          params: [input.txHash, payment.id, user.id],
+        },
+        {
+          sql: "UPDATE bills SET status = 'paid', paid_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+          params: [payment.bill_id, user.id],
+        },
+      ]);
+      return { ...payment, status: "paid" as const, tx_hash: input.txHash };
+    },
+    () => {
+      payment.status = "paid";
+      payment.tx_hash = input.txHash;
+      const localBill = localState().bills.find(
+        (item) => item.id === payment.bill_id && item.user_id === user.id,
+      );
       if (localBill) {
         localBill.status = "paid";
         localBill.paid_at = new Date().toISOString();
       }
       return payment;
-    }
+    },
   );
 }

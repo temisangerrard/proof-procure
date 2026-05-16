@@ -11,7 +11,11 @@ export const metadata: Metadata = {
     "Turn procurement conversations from Telegram, email, and voice notes into structured agreements both parties can ratify, fund, and execute.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full antialiased">

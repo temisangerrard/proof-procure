@@ -4,7 +4,8 @@ import { createBill, listBills } from "@/lib/procure-store";
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const bills = await listBills(user);
   return NextResponse.json({ bills });
@@ -12,9 +13,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
   const bill = await createBill(user, {
     supplierId: String(body.supplierId || ""),
     title: String(body.title || "Supplier payment"),

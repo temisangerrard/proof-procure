@@ -13,14 +13,18 @@ import {
   LogOut,
   PiggyBank,
   Plus,
+  ScrollText,
   Settings,
   Users,
+  Wallet,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/app", icon: LayoutDashboard },
-  { label: "People", href: "/app/suppliers", icon: Users },
+  { label: "Contracts", href: "/app/agreements", icon: ScrollText },
+  { label: "Suppliers", href: "/app/suppliers", icon: Users },
   { label: "Bills", href: "/app/obligations", icon: FileText },
+  { label: "Account", href: "/app/account", icon: Wallet },
   { label: "Grow", href: "/app/reserves", icon: PiggyBank },
   { label: "Pay", href: "/app/payments", icon: Banknote },
   { label: "More", href: "/app/settings", icon: Settings },
@@ -45,8 +49,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Plus className="size-3.5" /> Add bill
               </Button>
             </Link>
-            <span className="hidden text-sm text-gray-500 sm:block">{email}</span>
-            <Button variant="ghost" size="icon-sm" onClick={signOut} title="Sign out">
+            <span className="hidden text-sm text-gray-500 sm:block">
+              {email}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={signOut}
+              title="Sign out"
+            >
               <LogOut className="size-4" />
             </Button>
           </div>
@@ -56,14 +67,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             const active =
               item.href === "/app"
                 ? pathname === "/app"
-                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
                   "inline-flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950",
-                  active && "bg-slate-950 text-white hover:bg-slate-950 hover:text-white"
+                  active &&
+                    "bg-slate-950 text-white hover:bg-slate-950 hover:text-white",
                 )}
               >
                 <item.icon className="size-4" />

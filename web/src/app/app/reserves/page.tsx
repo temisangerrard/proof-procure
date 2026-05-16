@@ -9,6 +9,7 @@ import {
   Sprout,
   WalletCards,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const PRODUCTS = [
@@ -84,12 +85,7 @@ export default function GrowPage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-3">
-        <Bucket
-          label="Free"
-          value="-"
-          note="Use now"
-          icon={WalletCards}
-        />
+        <Bucket label="Free" value="-" note="Use now" icon={WalletCards} />
         <Bucket
           label="Earning"
           value="-"
@@ -123,10 +119,12 @@ export default function GrowPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <a href="/app/reserves/earn">
+            <Link href="/app/reserves/earn">
               <Button className="h-11">View</Button>
-            </a>
-            <Button variant="outline" className="h-11" disabled>Withdraw</Button>
+            </Link>
+            <Button variant="outline" className="h-11" disabled>
+              Withdraw
+            </Button>
           </div>
         </div>
       </section>
@@ -138,7 +136,9 @@ export default function GrowPage() {
             className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
           >
             <div className="flex items-start justify-between gap-4">
-              <div className={`flex size-12 items-center justify-center rounded-2xl ring-1 ${product.tone}`}>
+              <div
+                className={`flex size-12 items-center justify-center rounded-2xl ring-1 ${product.tone}`}
+              >
                 <product.icon className="size-6" />
               </div>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -151,7 +151,10 @@ export default function GrowPage() {
 
             <div className="mt-5 grid gap-2 rounded-2xl bg-slate-50 p-4">
               <ProductLine label="Tool" value={product.provider} />
-              <ProductLine label="Exit" value={product.out.replace("Exit: ", "")} />
+              <ProductLine
+                label="Exit"
+                value={product.out.replace("Exit: ", "")}
+              />
               <ProductLine label="Risk" value={product.risk} />
               <ProductLine label="Use" value="Money not needed for bills" />
             </div>
@@ -192,9 +195,13 @@ function Bucket({
   active?: boolean;
 }) {
   return (
-    <div className={`rounded-3xl p-5 shadow-sm ring-1 ${active ? "bg-emerald-50 ring-emerald-200" : "bg-white ring-slate-200"}`}>
+    <div
+      className={`rounded-3xl p-5 shadow-sm ring-1 ${active ? "bg-emerald-50 ring-emerald-200" : "bg-white ring-slate-200"}`}
+    >
       <div className="flex items-center justify-between">
-        <div className={`flex size-11 items-center justify-center rounded-2xl ${active ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+        <div
+          className={`flex size-11 items-center justify-center rounded-2xl ${active ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}
+        >
           <Icon className="size-5" />
         </div>
         {active && (
@@ -214,7 +221,9 @@ function ProductLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-right text-sm font-semibold text-slate-900">{value}</span>
+      <span className="text-right text-sm font-semibold text-slate-900">
+        {value}
+      </span>
     </div>
   );
 }

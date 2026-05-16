@@ -68,7 +68,8 @@ const TOOL_DETAILS = {
     title: "Cash out",
     icon: Landmark,
     status: "Partner needed",
-    summary: "Choose payout partners by country before wiring this into the app.",
+    summary:
+      "Choose payout partners by country before wiring this into the app.",
     rows: [
       ["Best for", "Local bank or mobile money"],
       ["Route", "Depends on country"],
@@ -125,7 +126,8 @@ export default async function GrowToolPage({
   params: Promise<{ tool: string }>;
 }) {
   const { tool } = await params;
-  const detail = TOOL_DETAILS[tool as keyof typeof TOOL_DETAILS] || TOOL_DETAILS.earn;
+  const detail =
+    TOOL_DETAILS[tool as keyof typeof TOOL_DETAILS] || TOOL_DETAILS.earn;
   const Icon = detail.icon;
 
   return (
@@ -144,8 +146,12 @@ export default async function GrowToolPage({
             <div className="flex size-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/10">
               <Icon className="size-7" />
             </div>
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight">{detail.title}</h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">{detail.summary}</p>
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight">
+              {detail.title}
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
+              {detail.summary}
+            </p>
           </div>
           <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-300/20">
             {detail.status}
@@ -173,7 +179,9 @@ export default async function GrowToolPage({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">{link.label}</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{link.note}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  {link.note}
+                </p>
               </div>
               <ExternalLink className="size-5 shrink-0 text-slate-400" />
             </div>
@@ -187,7 +195,8 @@ export default async function GrowToolPage({
           Check bills before moving money.
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900">
-          Grow tools should only use money that is not needed for supplier payments.
+          Grow tools should only use money that is not needed for supplier
+          payments.
         </p>
       </section>
 
@@ -204,7 +213,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3">
       <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-right text-sm font-semibold text-slate-950">{value}</span>
+      <span className="text-right text-sm font-semibold text-slate-950">
+        {value}
+      </span>
     </div>
   );
 }

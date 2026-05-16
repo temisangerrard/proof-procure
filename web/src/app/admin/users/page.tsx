@@ -10,13 +10,17 @@ interface User {
   created_at: string;
 }
 
+interface UsersResponse {
+  users?: User[];
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/users")
       .then((r) => r.json())
-      .then((d: any) => setUsers(d.users || []))
+      .then((d: UsersResponse) => setUsers(d.users || []))
       .catch(() => {});
   }, []);
 
@@ -27,7 +31,9 @@ export default function AdminUsersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, role: newRole }),
     });
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
+    );
   };
 
   return (
@@ -51,7 +57,9 @@ export default function AdminUsersPage() {
                 <td className="px-4 py-2">{u.email}</td>
                 <td className="px-4 py-2 capitalize">{u.role}</td>
                 <td className="px-4 py-2">{u.agreement_count ?? 0}</td>
-                <td className="px-4 py-2 text-gray-400">{u.created_at.slice(0, 10)}</td>
+                <td className="px-4 py-2 text-gray-400">
+                  {u.created_at.slice(0, 10)}
+                </td>
                 <td className="px-4 py-2">
                   <button
                     onClick={() => toggleAdmin(u.id, u.role)}
@@ -63,7 +71,11 @@ export default function AdminUsersPage() {
               </tr>
             ))}
             {!users.length && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No users</td></tr>
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  No users
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

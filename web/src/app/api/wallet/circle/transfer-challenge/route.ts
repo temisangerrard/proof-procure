@@ -4,9 +4,10 @@ import { createCircleTransferChallenge } from "@/lib/circle-user-controlled";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
   const userToken = String(body.userToken || "");
   const walletId = String(body.walletId || "");
   const destinationAddress = String(body.destinationAddress || "");
@@ -15,7 +16,10 @@ export async function POST(request: Request) {
   const billId = String(body.billId || "");
 
   if (!userToken || !walletId || !destinationAddress || !amount) {
-    return NextResponse.json({ error: "Missing transfer details" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing transfer details" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -30,8 +34,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ challengeId: data?.challengeId });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not start payment" },
-      { status: 400 }
+      {
+        error:
+          error instanceof Error ? error.message : "Could not start payment",
+      },
+      { status: 400 },
     );
   }
 }
