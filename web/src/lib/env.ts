@@ -9,6 +9,12 @@ export const env = {
   get DEPLOYER_PRIVATE_KEY() {
     return optional("DEPLOYER_PRIVATE_KEY");
   },
+  get WALLET_SEED() {
+    return optional("WALLET_SEED");
+  },
+  get GAS_SPONSOR_PRIVATE_KEY() {
+    return optional("GAS_SPONSOR_PRIVATE_KEY");
+  },
   get BASE_RPC_URL() {
     return optional("BASE_RPC_URL", "https://mainnet.base.org");
   },
@@ -19,7 +25,19 @@ export const env = {
     );
   },
   get FACTORY_CONTRACT_ADDRESS() {
-    return optional("FACTORY_CONTRACT_ADDRESS");
+    return optional(
+      "FACTORY_CONTRACT_ADDRESS",
+      "0x84a52e5bb4831d1171cc870f3621cf376fe50933",
+    );
+  },
+  get USDC_CONTRACT_ADDRESS() {
+    return optional(
+      "USDC_CONTRACT_ADDRESS",
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    );
+  },
+  get QWEN_API_KEY() {
+    return optional("QWEN_API_KEY");
   },
   get TEST_API_KEY() {
     return optional("TEST_API_KEY");
@@ -39,11 +57,8 @@ export const env = {
   get CIRCLE_BLOCKCHAIN() {
     return optional("CIRCLE_BLOCKCHAIN", "ARC-TESTNET");
   },
-  get COINBASE_CDP_PROJECT_ID() {
-    return optional("COINBASE_CDP_PROJECT_ID", optional("NEXT_PUBLIC_CDP_PROJECT_ID"));
-  },
   get WALLET_PROVIDER() {
-    return optional("WALLET_PROVIDER", "coinbase");
+    return optional("WALLET_PROVIDER", "circle");
   },
   get RESEND_API_KEY() {
     return optional("RESEND_API_KEY");

@@ -1,0 +1,12 @@
+{
+  "name": "proof-procure-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "ethers": "^6.16.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.83.0",
+    "@cloudflare/workers-types": "^4.20260418.1"
+  }
+}

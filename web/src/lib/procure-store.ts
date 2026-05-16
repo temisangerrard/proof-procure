@@ -321,7 +321,7 @@ export async function getOrCreateWallet(user: SessionUser) {
   );
   if (existing) return existing;
 
-  const embedded = await getOrCreateEmbeddedWallet(user.email);
+  const embedded = await getOrCreateEmbeddedWallet();
   const wallet: WalletRecord = {
     id: nanoid(),
     user_id: user.id,

@@ -31,7 +31,22 @@ const INDUSTRY_TYPES = [
   { label: "Other", emoji: "🔧" },
 ];
 
-const CORRIDOR_CODES = ["CN","IN","VN","TR","AE","BD","PK","TH","MY","ID","GB","DE","IT","US"];
+const CORRIDOR_CODES = [
+  "CN",
+  "IN",
+  "VN",
+  "TR",
+  "AE",
+  "BD",
+  "PK",
+  "TH",
+  "MY",
+  "ID",
+  "GB",
+  "DE",
+  "IT",
+  "US",
+];
 const TRADE_CORRIDORS = [
   ...CORRIDOR_CODES.map((code) => {
     const c = COUNTRIES.find((x) => x.code === code);

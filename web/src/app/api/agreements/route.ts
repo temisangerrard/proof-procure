@@ -55,19 +55,22 @@ If a field can't be determined, use empty string "". If confidence < 0.5, still 
 Conversation:
 ${rawInput}`;
 
-  const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.GLM_API_KEY}`,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    "https://coding-intl.dashscope.aliyuncs.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.QWEN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "qwen-plus",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 512,
+        temperature: 0.1,
+      }),
     },
-    body: JSON.stringify({
-      model: "glm-4-plus",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 512,
-      temperature: 0.1,
-    }),
-  });
+  );
 
   const data = (await res.json()) as ChatCompletionResponse;
   const content = data.choices?.[0]?.message?.content || "";

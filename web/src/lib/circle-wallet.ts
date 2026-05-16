@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { env } from "./env";
 
 export interface EmbeddedWalletRecord {
-  provider: "circle" | "coinbase";
+  provider: "circle";
   providerUserId?: string;
   providerWalletId?: string;
   address?: string;
@@ -10,26 +10,14 @@ export interface EmbeddedWalletRecord {
   status: "pending" | "ready" | "blocked";
 }
 
-export async function getOrCreateEmbeddedWallet(
-  email: string,
-): Promise<EmbeddedWalletRecord> {
-  if (env.WALLET_PROVIDER === "coinbase" || env.COINBASE_CDP_PROJECT_ID) {
-    return {
-      provider: "coinbase",
-      providerUserId: email.toLowerCase(),
-      providerWalletId: `coinbase:${email.toLowerCase()}`,
-      chain: "base",
-      status: "pending",
-    };
+export async function getOrCreateEmbeddedWallet(): Promise<EmbeddedWalletRecord> {
+  if (env.WALLET_PROVIDER !== "circle") {
+    throw new Error("Unsupported wallet provider");
   }
 
-  if (!env.CIRCLE_API_KEY || !env.CIRCLE_WALLET_SET_ID) {
-    throw new Error("Circle wallet provider is not configured");
-  }
-
-  // Circle user-controlled wallet creation is intentionally isolated here.
-  // Once wallet-set credentials are present, replace this guarded branch with
-  // the exact Circle Web SDK/API calls without changing app routes.
+  // Signup should never fail because wallet activation is still waiting on the
+  // Circle user-controlled challenge. The Settings flow replaces this pending
+  // record with the real Circle wallet ID and address once the user approves.
   return {
     provider: "circle",
     providerUserId: `circle_pending_${nanoid(8)}`,

@@ -8,19 +8,23 @@ import { useAuth } from "@/lib/auth-context";
 export default function AccountPage() {
   const { email } = useAuth();
   const [address, setAddress] = useState<string | null>(null);
+  const [walletStatus, setWalletStatus] = useState("pending");
   const [copied, setCopied] = useState(false);
   const [showFull, setShowFull] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/wallet")
       .then((r) => r.json())
-      .then((d: { address?: string }) => d.address && setAddress(d.address))
+      .then((d: { address?: string; status?: string }) => {
+        if (d.address) setAddress(d.address);
+        if (d.status) setWalletStatus(d.status);
+      })
       .catch(() => {});
   }, []);
 
   const shortAddress = address
     ? `${address.slice(0, 10)}...${address.slice(-4)}`
-    : "Deriving address…";
+    : "Finish setup";
 
   async function copyAddress() {
     if (!address) return;
@@ -51,7 +55,7 @@ export default function AccountPage() {
             className="flex-1 truncate rounded-xl bg-white/10 px-4 py-3 text-left font-mono text-sm text-slate-200 hover:bg-white/15 transition-colors"
             title="Click to toggle full address"
           >
-            {showFull ? (address ?? "Loading…") : shortAddress}
+            {showFull ? (address ?? "No address yet") : shortAddress}
           </button>
           <button
             type="button"
@@ -73,7 +77,9 @@ export default function AccountPage() {
           <div>
             <p className="font-semibold text-white">Receive USDC</p>
             <p className="mt-1 text-sm text-slate-400">
-              Share your address or scan the QR code.
+              {walletStatus === "ready"
+                ? "Share your address or scan the QR code."
+                : "Create your payment account first."}
             </p>
           </div>
         </div>

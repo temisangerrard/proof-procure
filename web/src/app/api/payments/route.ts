@@ -37,7 +37,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ payment });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Payment update failed" },
+      {
+        error: error instanceof Error ? error.message : "Payment update failed",
+      },
       { status: 400 },
     );
   }

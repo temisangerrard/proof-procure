@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { d1 } from "@/lib/db";
 
-type AgreementPatch = Partial<Record<
-  | "status"
-  | "item"
-  | "quantity"
-  | "price"
-  | "total"
-  | "supplier_email"
-  | "delivery_window"
-  | "payment_condition",
-  string
->>;
+type AgreementPatch = Partial<
+  Record<
+    | "status"
+    | "item"
+    | "quantity"
+    | "price"
+    | "total"
+    | "supplier_email"
+    | "delivery_window"
+    | "payment_condition",
+    string
+  >
+>;
 
 export async function GET(
   _req: NextRequest,

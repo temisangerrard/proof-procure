@@ -1,0 +1,3 @@
+-- Agreement on-chain columns are already present in infra/schema.sql and the
+-- deployed Cloudflare D1 schema. This migration is intentionally a no-op so it
+-- can remain in history without failing on duplicate columns.

@@ -45,15 +45,16 @@ const STATUS_ACTIONS: Record<
     { label: "Send to supplier", icon: Send, action: "awaiting_supplier" },
   ],
   awaiting_supplier: [],
-  ratified: [
-    { label: "Fund agreement", icon: DollarSign, action: "funded" },
-  ],
-  funded: [
-    { label: "Mark delivered", icon: Package, action: "delivered" },
-  ],
+  ratified: [{ label: "Fund agreement", icon: DollarSign, action: "funded" }],
+  funded: [{ label: "Mark delivered", icon: Package, action: "delivered" }],
   delivered: [
     { label: "Confirm delivery", icon: ThumbsUp, action: "payment_released" },
-    { label: "Reject delivery", icon: Circle, action: "rejected", variant: "outline" },
+    {
+      label: "Reject delivery",
+      icon: Circle,
+      action: "rejected",
+      variant: "outline",
+    },
   ],
 };
 
@@ -137,7 +138,10 @@ export default function AgreementDetailPage({
     return (
       <div className="py-20 text-center">
         <p className="text-slate-500">Agreement not found.</p>
-        <Link href="/app/agreements" className="mt-4 inline-block text-sm underline">
+        <Link
+          href="/app/agreements"
+          className="mt-4 inline-block text-sm underline"
+        >
           Back to contracts
         </Link>
       </div>
@@ -186,7 +190,10 @@ export default function AgreementDetailPage({
                 { label: "Supplier", value: agreement.supplier_email || "—" },
                 { label: "Item", value: agreement.item || "—" },
                 { label: "Quantity", value: agreement.quantity || "—" },
-                { label: "Unit price", value: agreement.price ? `$${agreement.price}` : "—" },
+                {
+                  label: "Unit price",
+                  value: agreement.price ? `$${agreement.price}` : "—",
+                },
                 {
                   label: "Total",
                   value: agreement.total
@@ -253,7 +260,9 @@ export default function AgreementDetailPage({
                       })}
                     </p>
                     {ev.detail && (
-                      <p className="mt-0.5 text-xs text-slate-400">{ev.detail}</p>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {ev.detail}
+                      </p>
                     )}
                   </li>
                 ))}

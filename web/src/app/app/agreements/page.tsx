@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  FileText,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, FileText, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Agreement {
@@ -150,7 +145,9 @@ export default function AgreementsPage() {
             <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <FileText className="size-7" />
             </div>
-            <p className="mt-4 font-semibold text-slate-700">No contracts yet</p>
+            <p className="mt-4 font-semibold text-slate-700">
+              No contracts yet
+            </p>
             <p className="mt-1 text-sm text-slate-500">
               Describe your first trade deal above.
             </p>
