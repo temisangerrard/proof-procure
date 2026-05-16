@@ -30,7 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = () => {
-    window.location.href = "/cdn-cgi/access/logout";
+    fetch("/api/auth/sign-out", { method: "POST" }).finally(() => {
+      window.location.href = "/login";
+    });
   };
 
   return (

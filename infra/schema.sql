@@ -19,6 +19,13 @@ CREATE TABLE IF NOT EXISTS auth_codes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS agreements (
   id TEXT PRIMARY KEY,
   buyer_id TEXT NOT NULL REFERENCES users(id),
@@ -167,6 +174,7 @@ CREATE INDEX IF NOT EXISTS idx_agreements_share_token ON agreements(share_token)
 CREATE INDEX IF NOT EXISTS idx_audit_agreement ON audit_events(agreement_id);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_auth_codes_email ON auth_codes(email, code, used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id, expires_at);
 CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
 CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);
 CREATE INDEX IF NOT EXISTS idx_suppliers_user ON suppliers(user_id);

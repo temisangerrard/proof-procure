@@ -3,7 +3,7 @@ import { d1 } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = ((await req.json()) as any);
+    const { email } = ((await req.json()) as Record<string, unknown>);
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
@@ -11,10 +11,16 @@ export async function POST(req: NextRequest) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await d1.run(
-      "INSERT INTO auth_codes (email, code, expires_at) VALUES (?, ?, ?)",
-      [email.toLowerCase(), code, expiresAt]
-    );
+    try {
+      await d1.run(
+        "INSERT INTO auth_codes (email, code, expires_at) VALUES (?, ?, ?)",
+        [email.toLowerCase(), code, expiresAt]
+      );
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") throw error;
+      console.log(`[DEV] OTP for ${email}: ${code}`);
+      return NextResponse.json({ sent: true, devCode: code });
+    }
 
     const resendKey = process.env.RESEND_API_KEY;
     if (resendKey) {
@@ -47,7 +53,10 @@ export async function POST(req: NextRequest) {
       console.log(`[DEV] OTP for ${email}: ${code}`);
     }
 
-    return NextResponse.json({ sent: true });
+    return NextResponse.json({
+      sent: true,
+      ...(!resendKey || process.env.NODE_ENV !== "production" ? { devCode: code } : {}),
+    });
   } catch (err) {
     console.error("send-code error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
