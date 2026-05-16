@@ -57,8 +57,19 @@ jobs:
           grep -q "product_categories" /tmp/businesses-schema.txt
           grep -q "payment_method" /tmp/businesses-schema.txt
 
-      - name: Deploy Worker
+      - name: Deploy web worker
         working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --keep-vars
+
+      - name: Install keeper dependencies
+        working-directory: workers/keeper
+        run: npm ci
+
+      - name: Deploy keeper worker
+        working-directory: workers/keeper
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
