@@ -41,6 +41,30 @@ export async function ensureUser(email: string): Promise<SessionUser> {
   return { id, email: lower, role };
 }
 
+export async function createAuthSession(userId: string) {
+  const sessionId = nanoid(40);
+  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await d1.run(
+    "INSERT INTO auth_sessions (id, user_id, expires_at) VALUES (?, ?, ?)",
+    [sessionId, userId, expires.toISOString()],
+  );
+
+  return { sessionId, expires };
+}
+
+export async function setAuthSessionCookie(userId: string) {
+  const { sessionId, expires } = await createAuthSession(userId);
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires,
+  });
+}
+
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {
     const h = await headers();
